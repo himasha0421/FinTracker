@@ -140,29 +140,7 @@ export default function AccountsCard() {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2 mt-5">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="bg-background"
-              onClick={handleAddAccount}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add
-            </Button>
-            <Button variant="outline" size="sm" className="bg-background">
-              <Send className="h-4 w-4 mr-1" />
-              Send
-            </Button>
-            <Button variant="outline" size="sm" className="bg-background">
-              <Upload className="h-4 w-4 mr-1" />
-              Top-up
-            </Button>
-            <Button variant="outline" size="sm" className="bg-background">
-              <MoreHorizontal className="h-4 w-4 mr-1" />
-              More
-            </Button>
-          </div>
+          
         </CardContent>
       </Card>
 
