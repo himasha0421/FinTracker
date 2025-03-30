@@ -52,7 +52,7 @@ const AccountItem = ({ account, onEdit }: AccountItemProps) => {
   }).format(Number(account.balance));
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-border">
+    <div className="flex items-center justify-between py-3 border-b border-border group">
       <div className="flex items-center">
         <div className={`w-8 h-8 rounded-md ${colorClasses[account.color]} flex items-center justify-center mr-3`}>
           {accountIcons[account.icon] || <div className="h-4 w-4" />}
@@ -62,8 +62,16 @@ const AccountItem = ({ account, onEdit }: AccountItemProps) => {
           <p className="text-sm text-muted-foreground">{account.description}</p>
         </div>
       </div>
-      <div className="text-right font-mono">
-        <span className="font-medium">{formattedBalance}</span>
+      <div className="flex items-center gap-2">
+        <div className="text-right font-mono">
+          <span className="font-medium">{formattedBalance}</span>
+        </div>
+        <button 
+          onClick={() => onEdit(account)}
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded-md"
+        >
+          <Pencil className="h-4 w-4 text-muted-foreground" />
+        </button>
       </div>
     </div>
   );
@@ -78,7 +86,12 @@ export default function AccountsCard() {
     queryKey: ['/api/accounts'],
   });
 
-  const handleEditClick = () => {
+  const handleEditClick = (account?: Account) => {
+    if (account) {
+      setEditingAccount(account);
+    } else {
+      setEditingAccount(null);
+    }
     setIsAccountFormOpen(true);
   };
 
