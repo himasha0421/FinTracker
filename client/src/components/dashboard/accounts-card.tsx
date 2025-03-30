@@ -116,11 +116,12 @@ export default function AccountsCard() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Your Accounts</CardTitle>
           <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={handleEditClick}
+            variant="outline"
+            onClick={handleAddAccount}
+            className="flex items-center gap-2"
           >
-            <Pencil className="h-5 w-5 text-primary" />
+            <Plus className="h-4 w-4" />
+            Add New Account
           </Button>
         </CardHeader>
         <CardContent>
