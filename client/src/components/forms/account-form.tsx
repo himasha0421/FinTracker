@@ -88,13 +88,20 @@ export default function AccountForm({ isOpen, onClose, account }: AccountFormPro
 
   const form = useForm<z.infer<typeof accountFormSchema>>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues: {
-      name: account?.name || "",
-      description: account?.description || "",
-      balance: account?.balance.toString() || "0",
-      type: account?.type || "savings",
-      icon: account?.icon || "wallet",
-      color: account?.color || "green",
+    values: account ? {
+      name: account.name,
+      description: account.description || "",
+      balance: account.balance.toString(),
+      type: account.type,
+      icon: account.icon,
+      color: account.color,
+    } : {
+      name: "",
+      description: "",
+      balance: "0",
+      type: "savings",
+      icon: "wallet",
+      color: "green",
     },
   });
 
