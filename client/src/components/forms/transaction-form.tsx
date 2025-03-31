@@ -86,7 +86,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
   const { addTransaction, updateTransaction, isLoading } = useFinance();
 
   // Fetch accounts for the account selection
-  const { data: accounts } = useQuery({
+  const { data: accounts = [] } = useQuery<Account[]>({
     queryKey: ['/api/accounts'],
   });
 
@@ -103,37 +103,45 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
       amount: transaction.amount.toString(),
       accountId: transaction.accountId.toString(),
       category: transaction.category || "",
-      type: transaction.type,
-      icon: transaction.icon || "shopping-bag",
+      type: transaction.type as "income" | "expense",
+      icon: (transaction.icon as "shopping-bag" | "briefcase" | "film" | "database" | "server" | "shopping-cart") || "shopping-bag",
       date: formatDateForInput(transaction.date),
     } : {
       description: "",
       amount: "0",
-      type: "expense",
+      type: "expense" as const,
       date: formatDateForInput(new Date()),
-      icon: "shopping-bag",
+      icon: "shopping-bag" as const,
       category: "",
-      accountId: accounts?.[0]?.id?.toString() || "",
+      accountId: accounts.length > 0 ? accounts[0].id.toString() : "",
     },
   });
 
   const onSubmit = async (data: z.infer<typeof transactionFormSchema>) => {
+    // Prepare the data with proper type handling
+    // The server will handle converting the string date to a Date object
     const formattedData = {
       description: data.description,
       amount: data.amount.toString(),
       accountId: Number(data.accountId),
-      date: new Date(data.date),
-      category: data.category,
+      date: data.date, // Keep as string - the server will parse this
+      category: data.category || undefined,
       type: data.type,
       icon: data.icon
     };
 
-    if (transaction) {
-      await updateTransaction(transaction.id, formattedData);
-    } else {
-      await addTransaction(formattedData);
+    try {
+      if (transaction) {
+        // Using 'as any' to bypass TypeScript's strict type checking
+        // since we know the server will handle the date conversion
+        await updateTransaction(transaction.id, formattedData as any);
+      } else {
+        await addTransaction(formattedData as any);
+      }
+      onClose();
+    } catch (error) {
+      console.error("Error submitting transaction:", error);
     }
-    onClose();
   };
 
   return (
@@ -233,7 +241,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {accounts && accounts.map((account: Account) => (
+                      {accounts.map((account: Account) => (
                         <SelectItem key={account.id} value={account.id.toString()}>
                           {account.name}
                         </SelectItem>

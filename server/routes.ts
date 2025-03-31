@@ -176,14 +176,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new transaction
   router.post("/transactions", async (req: Request, res: Response) => {
     try {
-      const transactionData = insertTransactionSchema.parse(req.body);
+      // Convert string date to Date object if present
+      const requestData = { ...req.body };
+      if (requestData.date && typeof requestData.date === 'string') {
+        requestData.date = new Date(requestData.date);
+      }
+      
+      const transactionData = insertTransactionSchema.parse(requestData);
       const transaction = await storage.createTransaction(transactionData);
       res.status(201).json(transaction);
     } catch (error) {
       if (error instanceof ZodError) {
+        console.error("Validation error:", error.errors);
         return res.status(400).json({
           message: "Invalid transaction data",
           error: fromZodError(error).message,
+          details: error.errors,
         });
       }
       res
@@ -198,7 +206,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       console.log("Updating transaction:", id, "with data:", req.body);
 
-      const transactionData = insertTransactionSchema.partial().parse(req.body);
+      // Convert string date to Date object if present
+      const requestData = { ...req.body };
+      if (requestData.date && typeof requestData.date === 'string') {
+        requestData.date = new Date(requestData.date);
+      }
+
+      const transactionData = insertTransactionSchema.partial().parse(requestData);
       console.log("Validated transaction data:", transactionData);
 
       const updatedTransaction = await storage.updateTransaction(
@@ -288,14 +302,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new financial goal
   router.post("/goals", async (req: Request, res: Response) => {
     try {
-      const goalData = insertFinancialGoalSchema.parse(req.body);
+      // Convert string date to Date object if present
+      const requestData = { ...req.body };
+      if (requestData.targetDate && typeof requestData.targetDate === 'string') {
+        requestData.targetDate = new Date(requestData.targetDate);
+      }
+      
+      const goalData = insertFinancialGoalSchema.parse(requestData);
       const goal = await storage.createFinancialGoal(goalData);
       res.status(201).json(goal);
     } catch (error) {
       if (error instanceof ZodError) {
+        console.error("Validation error:", error.errors);
         return res.status(400).json({
           message: "Invalid financial goal data",
           error: fromZodError(error).message,
+          details: error.errors,
         });
       }
       res
@@ -311,7 +333,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.patch("/goals/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const goalData = insertFinancialGoalSchema.partial().parse(req.body);
+      
+      // Convert string date to Date object if present
+      const requestData = { ...req.body };
+      if (requestData.targetDate && typeof requestData.targetDate === 'string') {
+        requestData.targetDate = new Date(requestData.targetDate);
+      }
+      
+      const goalData = insertFinancialGoalSchema.partial().parse(requestData);
 
       const updatedGoal = await storage.updateFinancialGoal(id, goalData);
 
@@ -322,9 +351,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedGoal);
     } catch (error) {
       if (error instanceof ZodError) {
+        console.error("Validation error:", error.errors);
         return res.status(400).json({
           message: "Invalid financial goal data",
           error: fromZodError(error).message,
+          details: error.errors,
         });
       }
       res
