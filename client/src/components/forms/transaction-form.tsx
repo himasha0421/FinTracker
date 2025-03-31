@@ -119,10 +119,13 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
 
   const onSubmit = async (data: z.infer<typeof transactionFormSchema>) => {
     const formattedData = {
-      ...data,
+      description: data.description,
       amount: Number(data.amount),
       accountId: Number(data.accountId),
-      date: new Date(data.date),
+      date: new Date(data.date).toISOString(),
+      category: data.category,
+      type: data.type,
+      icon: data.icon
     };
 
     if (transaction) {
