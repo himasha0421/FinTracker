@@ -25,10 +25,13 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Trash2 } from "lucide-react";
+import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
 import { useFinance } from "@/lib/context";
 import { useQuery } from "@tanstack/react-query";
 import type { Transaction, Account } from "@shared/schema";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 
 // Form schema for transactions
 const transactionFormSchema = z.object({
@@ -93,6 +96,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
   // Format date for form default value
   const formatDateForInput = (date: string | Date) => {
     const d = new Date(date);
+    // Ensure date is in YYYY-MM-DD format for consistent storage
     return d.toISOString().split('T')[0];
   };
 
@@ -118,22 +122,24 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
   });
 
   const onSubmit = async (data: z.infer<typeof transactionFormSchema>) => {
+    // Make sure the date string is in YYYY-MM-DD format for consistent server-side parsing
+    const dateStr = data.date ? formatDateForInput(new Date(data.date)) : formatDateForInput(new Date());
+    
     // Prepare the data with proper type handling
-    // The server will handle converting the string date to a Date object
     const formattedData = {
       description: data.description,
       amount: data.amount.toString(),
       accountId: Number(data.accountId),
-      date: data.date, // Keep as string - the server will parse this
+      date: dateStr, // Ensure consistent YYYY-MM-DD format for server-side parsing
       category: data.category || undefined,
       type: data.type,
       icon: data.icon
     };
 
+    console.log("Submitting transaction with date:", dateStr);
+
     try {
       if (transaction) {
-        // Using 'as any' to bypass TypeScript's strict type checking
-        // since we know the server will handle the date conversion
         await updateTransaction(transaction.id, formattedData as any);
       } else {
         await addTransaction(formattedData as any);
@@ -199,9 +205,32 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                 render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormLabel>Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className="w-full flex justify-between font-normal"
+                            >
+                            {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const formattedDate = formatDateForInput(date);
+                              field.onChange(formattedDate);
+                            }
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
