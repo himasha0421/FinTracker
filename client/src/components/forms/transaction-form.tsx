@@ -122,7 +122,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
       description: data.description,
       amount: data.amount.toString(),
       accountId: Number(data.accountId),
-      date: new Date(data.date),
+      date: data.date instanceof Date ? data.date : new Date(data.date),
       category: data.category,
       type: data.type,
       icon: data.icon
