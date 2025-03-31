@@ -84,7 +84,7 @@ type TransactionFormProps = {
 
 export default function TransactionForm({ isOpen, onClose, transaction = null }: TransactionFormProps) {
   const { addTransaction, updateTransaction, isLoading } = useFinance();
-  
+
   // Fetch accounts for the account selection
   const { data: accounts } = useQuery({
     queryKey: ['/api/accounts'],
@@ -98,14 +98,22 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
 
   const form = useForm<z.infer<typeof transactionFormSchema>>({
     resolver: zodResolver(transactionFormSchema),
-    defaultValues: {
+    defaultValues: transaction ? {
       description: transaction?.description || "",
-      amount: transaction?.amount.toString() || "",
-      accountId: transaction?.accountId.toString() || "",
+      amount: transaction?.amount?.toString() || "",
+      accountId: transaction?.accountId?.toString() || "",
       category: transaction?.category || "",
       type: transaction?.type || "expense",
       icon: transaction?.icon || "shopping-bag",
       date: transaction ? formatDateForInput(transaction.date) : formatDateForInput(new Date()),
+    } : {
+      description: "",
+      amount: "0",
+      type: "expense",
+      date: formatDateForInput(new Date()),
+      icon: "shopping-bag",
+      category: "",
+      accountId: accounts?.[0]?.id?.toString() || "",
     },
   });
 
@@ -115,7 +123,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
       accountId: Number(data.accountId),
       date: new Date(data.date),
     };
-    
+
     if (transaction) {
       await updateTransaction(transaction.id, formattedData);
     } else {
@@ -130,7 +138,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
         <DialogHeader>
           <DialogTitle>{transaction ? "Edit Transaction" : "Add New Transaction"}</DialogTitle>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -146,7 +154,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                 </FormItem>
               )}
             />
-            
+
             <div className="flex gap-4">
               <FormField
                 control={form.control}
@@ -161,7 +169,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="date"
@@ -176,7 +184,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="type"
@@ -204,7 +212,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="accountId"
@@ -232,7 +240,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                 </FormItem>
               )}
             />
-            
+
             <div className="flex gap-4">
               <FormField
                 control={form.control}
@@ -261,7 +269,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="icon"
@@ -290,7 +298,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                 )}
               />
             </div>
-            
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
                 Cancel
