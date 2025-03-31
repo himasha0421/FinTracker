@@ -98,13 +98,13 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
 
   const form = useForm<z.infer<typeof transactionFormSchema>>({
     resolver: zodResolver(transactionFormSchema),
-    defaultValues: transaction ? {
+    values: transaction ? {
       description: transaction.description,
       amount: transaction.amount.toString(),
       accountId: transaction.accountId.toString(),
       category: transaction.category || "",
       type: transaction.type,
-      icon: transaction.icon,
+      icon: transaction.icon || "shopping-bag",
       date: formatDateForInput(transaction.date),
     } : {
       description: "",
