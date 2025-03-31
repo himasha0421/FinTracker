@@ -164,22 +164,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.patch("/transactions/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      console.log('Updating transaction:', id, 'with data:', req.body);
+      
       const transactionData = insertTransactionSchema.partial().parse(req.body);
+      console.log('Validated transaction data:', transactionData);
       
       const updatedTransaction = await storage.updateTransaction(id, transactionData);
       
       if (!updatedTransaction) {
+        console.log('Transaction not found:', id);
         return res.status(404).json({ message: "Transaction not found" });
       }
       
+      console.log('Successfully updated transaction:', updatedTransaction);
       res.json(updatedTransaction);
     } catch (error) {
       if (error instanceof ZodError) {
+        console.error('Validation error:', error.errors);
         return res.status(400).json({ 
           message: "Invalid transaction data", 
-          error: fromZodError(error).message 
+          error: fromZodError(error).message,
+          details: error.errors 
         });
       }
+      console.error('Error updating transaction:', error);
       res.status(500).json({ message: "Error updating transaction", error: String(error) });
     }
   });
