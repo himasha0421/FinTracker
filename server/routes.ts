@@ -176,10 +176,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new transaction
   router.post("/transactions", async (req: Request, res: Response) => {
     try {
-      // Convert string date to Date object if present
+      // Convert string date to Date object if present with timezone handling
       const requestData = { ...req.body };
       if (requestData.date && typeof requestData.date === 'string') {
-        requestData.date = new Date(requestData.date);
+        // Parse the date string in YYYY-MM-DD format
+        // Add 12 hours to ensure the date doesn't shift due to timezone
+        const [year, month, day] = requestData.date.split('-').map(Number);
+        if (year && month && day) {
+          const adjustedDate = new Date(year, month - 1, day, 12, 0, 0);
+          console.log("Original date string:", requestData.date, "Parsed date:", adjustedDate);
+          requestData.date = adjustedDate;
+        } else {
+          // Fallback if the format is not as expected
+          requestData.date = new Date(requestData.date);
+        }
       }
       
       const transactionData = insertTransactionSchema.parse(requestData);
@@ -206,10 +216,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       console.log("Updating transaction:", id, "with data:", req.body);
 
-      // Convert string date to Date object if present
+      // Convert string date to Date object if present with timezone handling
       const requestData = { ...req.body };
       if (requestData.date && typeof requestData.date === 'string') {
-        requestData.date = new Date(requestData.date);
+        // Parse the date string in YYYY-MM-DD format
+        // Add 12 hours to ensure the date doesn't shift due to timezone
+        const [year, month, day] = requestData.date.split('-').map(Number);
+        if (year && month && day) {
+          const adjustedDate = new Date(year, month - 1, day, 12, 0, 0);
+          console.log("Original date string:", requestData.date, "Parsed date:", adjustedDate);
+          requestData.date = adjustedDate;
+        } else {
+          // Fallback if the format is not as expected
+          requestData.date = new Date(requestData.date);
+        }
       }
 
       const transactionData = insertTransactionSchema.partial().parse(requestData);

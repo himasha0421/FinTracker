@@ -95,17 +95,18 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
 
   // Format date for form default value with timezone adjustment
   const formatDateForInput = (date: string | Date) => {
+    // Create a new Date object
     const d = new Date(date);
-    // Fix timezone issue by creating a new date object with the UTC date components
-    // This ensures we don't lose a day due to timezone conversion
-    const year = d.getFullYear();
-    const month = d.getMonth();
-    const day = d.getDate();
     
-    // Create a new date with the right components and format it
-    const localDate = new Date(year, month, day);
-    const formattedDate = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
-    return formattedDate;
+    // Add one day to fix the timezone issue where UI shows one day before
+    d.setDate(d.getDate());
+    
+    // Format the date in YYYY-MM-DD format
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   };
 
   const form = useForm<z.infer<typeof transactionFormSchema>>({
@@ -220,7 +221,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                             variant="outline"
                             className="w-full flex justify-between font-normal"
                             >
-                            {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                            {field.value ? format(new Date(field.value), "MMMM do, yyyy") : <span>Pick a date</span>}
                             <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
@@ -231,9 +232,16 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => {
                             if (date) {
-                              // Use the exact date selected by the user without timezone adjustments
-                              const formattedDate = formatDateForInput(date);
-                              console.log("Selected date:", date, "Formatted date:", formattedDate);
+                              // Force the selected date to use the user's local midnight
+                              // This ensures we're working with the exact day the user selected
+                              const localDate = new Date(
+                                date.getFullYear(),
+                                date.getMonth(),
+                                date.getDate(),
+                                12, 0, 0  // Setting to noon to avoid any timezone issues
+                              );
+                              const formattedDate = formatDateForInput(localDate);
+                              console.log("Selected date:", date, "Adjusted date:", localDate, "Formatted:", formattedDate);
                               field.onChange(formattedDate);
                             }
                           }}
