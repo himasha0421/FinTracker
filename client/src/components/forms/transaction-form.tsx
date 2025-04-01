@@ -93,18 +93,19 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
     queryKey: ['/api/accounts'],
   });
 
-  // Format date for form default value with timezone adjustment
+  // Format date for form default value with CST timezone adjustment
   const formatDateForInput = (date: string | Date) => {
     // Create a new Date object
     const d = new Date(date);
     
-    // Add one day to fix the timezone issue where UI shows one day before
-    d.setDate(d.getDate());
+    // Add CST timezone offset (CST is UTC-6)
+    // This converts the date to CST to avoid timezone issues
+    const cstDate = new Date(d.getTime() + (6 * 60 * 60 * 1000));
     
     // Format the date in YYYY-MM-DD format
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+    const year = cstDate.getFullYear();
+    const month = String(cstDate.getMonth() + 1).padStart(2, '0');
+    const day = String(cstDate.getDate()).padStart(2, '0');
     
     return `${year}-${month}-${day}`;
   };
@@ -232,16 +233,19 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => {
                             if (date) {
-                              // Force the selected date to use the user's local midnight
-                              // This ensures we're working with the exact day the user selected
-                              const localDate = new Date(
+                              // Force to CST (UTC-6) timezone with noon time to avoid midnight issues
+                              // This ensures the exact day shows correctly in CST timezone
+                              const cstDate = new Date(
                                 date.getFullYear(),
                                 date.getMonth(),
                                 date.getDate(),
                                 12, 0, 0  // Setting to noon to avoid any timezone issues
                               );
-                              const formattedDate = formatDateForInput(localDate);
-                              console.log("Selected date:", date, "Adjusted date:", localDate, "Formatted:", formattedDate);
+                              // Add offset for CST (UTC-6)
+                              const offsetDate = new Date(cstDate.getTime() + (6 * 60 * 60 * 1000));
+                              
+                              const formattedDate = formatDateForInput(offsetDate);
+                              console.log("Selected date:", date, "CST date:", offsetDate, "Formatted:", formattedDate);
                               field.onChange(formattedDate);
                             }
                           }}

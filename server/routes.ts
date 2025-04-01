@@ -179,12 +179,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert string date to Date object if present with timezone handling
       const requestData = { ...req.body };
       if (requestData.date && typeof requestData.date === 'string') {
-        // Parse the date string in YYYY-MM-DD format
-        // Add 12 hours to ensure the date doesn't shift due to timezone
+        // Parse the date string in YYYY-MM-DD format (CST timezone)
+        // Force the date to use CST (UTC-6) timezone to match frontend
         const [year, month, day] = requestData.date.split('-').map(Number);
         if (year && month && day) {
-          const adjustedDate = new Date(year, month - 1, day, 12, 0, 0);
-          console.log("Original date string:", requestData.date, "Parsed date:", adjustedDate);
+          // Create a date at noon to avoid timezone boundary issues
+          // Set it to noon CST which is 18:00 UTC to ensure consistency
+          const adjustedDate = new Date(Date.UTC(year, month - 1, day, 18, 0, 0));
+          console.log("Original date string:", requestData.date, "CST adjusted date:", adjustedDate);
           requestData.date = adjustedDate;
         } else {
           // Fallback if the format is not as expected
@@ -219,12 +221,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert string date to Date object if present with timezone handling
       const requestData = { ...req.body };
       if (requestData.date && typeof requestData.date === 'string') {
-        // Parse the date string in YYYY-MM-DD format
-        // Add 12 hours to ensure the date doesn't shift due to timezone
+        // Parse the date string in YYYY-MM-DD format (CST timezone)
+        // Force the date to use CST (UTC-6) timezone to match frontend
         const [year, month, day] = requestData.date.split('-').map(Number);
         if (year && month && day) {
-          const adjustedDate = new Date(year, month - 1, day, 12, 0, 0);
-          console.log("Original date string:", requestData.date, "Parsed date:", adjustedDate);
+          // Create a date at noon to avoid timezone boundary issues
+          // Set it to noon CST which is 18:00 UTC to ensure consistency
+          const adjustedDate = new Date(Date.UTC(year, month - 1, day, 18, 0, 0));
+          console.log("Original date string:", requestData.date, "CST adjusted date:", adjustedDate);
           requestData.date = adjustedDate;
         } else {
           // Fallback if the format is not as expected
