@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -58,8 +58,8 @@ const goalFormSchema = z.object({
     { message: "Current amount must be a non-negative number" }
   ),
   targetDate: z.string().refine(
-    (val) => !isNaN(Date.parse(val)) && new Date(val) > new Date(),
-    { message: "Target date must be in the future" }
+    (val) => !isNaN(Date.parse(val)),
+    { message: "Target date must be a valid date" }
   ),
   status: z.enum(["in-progress", "completed", "pending"]),
   icon: z.enum(["shield", "trending-up", "credit-card"]),
@@ -114,8 +114,8 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
     defaultValues: {
       name: goal?.name || "",
       description: goal?.description || "", // If description is null, use empty string
-      targetAmount: goal?.targetAmount.toString() || "",
-      currentAmount: goal?.currentAmount.toString() || "0",
+      targetAmount: goal?.targetAmount ? goal.targetAmount.toString() : "",
+      currentAmount: goal?.currentAmount ? goal.currentAmount.toString() : "0",
       targetDate: goal ? formatDateForInput(goal.targetDate) : getFutureDate(),
       status: (goal?.status === "in-progress" || goal?.status === "completed" || goal?.status === "pending") 
         ? goal.status as GoalStatus 
@@ -129,6 +129,29 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
         : "blue",
     },
   });
+  
+  // Reset form when goal changes
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({
+        name: goal?.name || "",
+        description: goal?.description || "",
+        targetAmount: goal?.targetAmount ? goal.targetAmount.toString() : "",
+        currentAmount: goal?.currentAmount ? goal.currentAmount.toString() : "0",
+        targetDate: goal ? formatDateForInput(goal.targetDate) : getFutureDate(),
+        status: (goal?.status === "in-progress" || goal?.status === "completed" || goal?.status === "pending") 
+          ? goal.status as GoalStatus 
+          : "in-progress",
+        icon: (goal?.icon === "shield" || goal?.icon === "trending-up" || goal?.icon === "credit-card") 
+          ? goal.icon as GoalIcon 
+          : "shield",
+        color: (goal?.color === "blue" || goal?.color === "green" || goal?.color === "yellow" || 
+                goal?.color === "purple" || goal?.color === "red") 
+          ? goal.color as GoalColor 
+          : "blue",
+      });
+    }
+  }, [form, goal, isOpen]);
 
   const onSubmit = async (data: z.infer<typeof goalFormSchema>) => {
     // Convert empty string description to null to match the schema
