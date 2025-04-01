@@ -60,6 +60,8 @@ const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
   
   const iconClass = goalIcons[goal.icon] ? goal.icon : "shield";
   const iconColorClass = colorClasses[goal.color] || colorClasses.blue;
+  const statusClass = statusClasses[goal.status] || statusClasses["in-progress"];
+  const statusLabel = statusLabels[goal.status] || "In Progress";
   
   return (
     <Card className="w-full">
@@ -71,8 +73,8 @@ const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
             </div>
             <h3 className="font-semibold">{goal.name}</h3>
           </div>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClasses[goal.status]}`}>
-            {statusLabels[goal.status]}
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+            {statusLabel}
           </span>
         </div>
         
