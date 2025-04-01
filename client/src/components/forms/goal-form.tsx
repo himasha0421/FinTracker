@@ -41,9 +41,14 @@ import {
 import type { FinancialGoal } from "@shared/schema";
 
 // Form schema for financial goals
+// Define types for goal status, icon, and color
+type GoalStatus = "in-progress" | "completed" | "pending";
+type GoalIcon = "shield" | "trending-up" | "credit-card";
+type GoalColor = "blue" | "green" | "yellow" | "purple" | "red";
+
 const goalFormSchema = z.object({
   name: z.string().min(1, "Goal name is required"),
-  description: z.string().optional(),
+  description: z.string(), // Changed to just string to avoid null in form
   targetAmount: z.string().refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     { message: "Target amount must be a positive number" }
@@ -108,20 +113,29 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
     resolver: zodResolver(goalFormSchema),
     defaultValues: {
       name: goal?.name || "",
-      description: goal?.description || "",
+      description: goal?.description || "", // If description is null, use empty string
       targetAmount: goal?.targetAmount.toString() || "",
       currentAmount: goal?.currentAmount.toString() || "0",
       targetDate: goal ? formatDateForInput(goal.targetDate) : getFutureDate(),
-      status: goal?.status || "in-progress",
-      icon: goal?.icon || "shield",
-      color: goal?.color || "blue",
+      status: (goal?.status === "in-progress" || goal?.status === "completed" || goal?.status === "pending") 
+        ? goal.status as GoalStatus 
+        : "in-progress",
+      icon: (goal?.icon === "shield" || goal?.icon === "trending-up" || goal?.icon === "credit-card") 
+        ? goal.icon as GoalIcon 
+        : "shield",
+      color: (goal?.color === "blue" || goal?.color === "green" || goal?.color === "yellow" || 
+              goal?.color === "purple" || goal?.color === "red") 
+        ? goal.color as GoalColor 
+        : "blue",
     },
   });
 
   const onSubmit = async (data: z.infer<typeof goalFormSchema>) => {
+    // Convert empty string description to null to match the schema
     const formattedData = {
       ...data,
       targetDate: new Date(data.targetDate),
+      description: data.description || null,
     };
     
     if (goal) {
@@ -171,7 +185,15 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter description" {...field} />
+                      <Input 
+                        placeholder="Enter description"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        disabled={field.disabled}
+                        name={field.name}
+                        ref={field.ref}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -230,6 +252,7 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
                     <FormLabel>Status</FormLabel>
                     <Select
                       onValueChange={field.onChange}
+                      value={field.value}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -259,6 +282,7 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
                       <FormLabel>Icon</FormLabel>
                       <Select
                         onValueChange={field.onChange}
+                        value={field.value}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -287,6 +311,7 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
                       <FormLabel>Color</FormLabel>
                       <Select
                         onValueChange={field.onChange}
+                        value={field.value}
                         defaultValue={field.value}
                       >
                         <FormControl>
