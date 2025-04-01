@@ -93,11 +93,19 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
     queryKey: ['/api/accounts'],
   });
 
-  // Format date for form default value
+  // Format date for form default value with timezone adjustment
   const formatDateForInput = (date: string | Date) => {
     const d = new Date(date);
-    // Ensure date is in YYYY-MM-DD format for consistent storage
-    return d.toISOString().split('T')[0];
+    // Fix timezone issue by creating a new date object with the UTC date components
+    // This ensures we don't lose a day due to timezone conversion
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const day = d.getDate();
+    
+    // Create a new date with the right components and format it
+    const localDate = new Date(year, month, day);
+    const formattedDate = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+    return formattedDate;
   };
 
   const form = useForm<z.infer<typeof transactionFormSchema>>({
@@ -223,10 +231,13 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => {
                             if (date) {
+                              // Use the exact date selected by the user without timezone adjustments
                               const formattedDate = formatDateForInput(date);
+                              console.log("Selected date:", date, "Formatted date:", formattedDate);
                               field.onChange(formattedDate);
                             }
                           }}
+                          disabled={(date) => date > new Date("2100-01-01") || date < new Date("1900-01-01")}
                           initialFocus
                         />
                       </PopoverContent>
