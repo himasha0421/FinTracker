@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, decimal, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, decimal, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -16,36 +16,6 @@ export const accounts = pgTable("accounts", {
 export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true });
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
 export type Account = typeof accounts.$inferSelect;
-
-// Chat Message table
-export const chatMessages = pgTable("chat_messages", {
-  id: serial("id").primaryKey(),
-  content: text("content").notNull(),
-  role: text("role").notNull(), // user, assistant, system
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-  metadata: jsonb("metadata"), // Store additional information about the message
-});
-
-export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true });
-export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
-export type ChatMessage = typeof chatMessages.$inferSelect;
-
-// File Upload table
-export const fileUploads = pgTable("file_uploads", {
-  id: serial("id").primaryKey(),
-  filename: text("filename").notNull(),
-  filepath: text("filepath").notNull(),
-  filetype: text("filetype").notNull(),
-  filesize: integer("filesize").notNull(),
-  uploadDate: timestamp("upload_date").defaultNow().notNull(),
-  chatMessageId: integer("chat_message_id"), // Related chat message if any
-  processed: boolean("processed").default(false),
-  processingResults: jsonb("processing_results"), // Store results from MCP processing
-});
-
-export const insertFileUploadSchema = createInsertSchema(fileUploads).omit({ id: true });
-export type InsertFileUpload = z.infer<typeof insertFileUploadSchema>;
-export type FileUpload = typeof fileUploads.$inferSelect;
 
 // Transaction table
 export const transactions = pgTable("transactions", {
