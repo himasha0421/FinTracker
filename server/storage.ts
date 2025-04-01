@@ -239,8 +239,8 @@ export class MemStorage implements IStorage {
 
     const updatedGoal = { ...goal, ...goalData };
     
-    // Update status based on progress
-    if (goalData.currentAmount !== undefined) {
+    // Only update status based on progress if status was not explicitly provided
+    if (goalData.currentAmount !== undefined && goalData.status === undefined) {
       const progress = Number(updatedGoal.currentAmount) / Number(updatedGoal.targetAmount);
       if (progress >= 1) {
         updatedGoal.status = 'completed';
