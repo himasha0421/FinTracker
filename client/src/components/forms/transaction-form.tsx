@@ -270,21 +270,23 @@ export default function TransactionForm({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={
-                            field.value ? new Date(field.value) : undefined
-                          }
+                          selected={field.value ? new Date(field.value) : undefined}
                           defaultMonth={field.value ? new Date(field.value) : undefined}
+                          modifiersClassNames={{
+                            selected: "bg-primary text-primary-foreground",
+                            today: "bg-accent text-accent-foreground",
+                          }}
+                          fromDate={new Date("1900-01-01")}
+                          toDate={new Date("2100-01-01")}
+                          fixedWeeks
                           onSelect={(date) => {
                             if (date) {
-                              // Important: DO NOT manipulate the date object's day here
-                              // Use the exact selected date to avoid off-by-one errors
-                              
-                              // Format the exact selected date to YYYY-MM-DD
+                              // Use the exact day from the date that was clicked
                               const day = date.getDate();
                               const month = date.getMonth() + 1;
                               const year = date.getFullYear();
                               
-                              // Create our date string in YYYY-MM-DD format
+                              // Create date string in YYYY-MM-DD format (ISO date format)
                               const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                               
                               console.log(
@@ -296,6 +298,7 @@ export default function TransactionForm({
                                 "Formatted:", formattedDate
                               );
                               
+                              // Update the form field with our formatted date
                               field.onChange(formattedDate);
                             }
                           }}
