@@ -36,11 +36,15 @@ function formatDate(date: Date | string) {
   const isYesterday = new Date(now.setDate(now.getDate() - 1)).toDateString() === txDate.toDateString();
   
   if (isToday) {
-    return `Today, ${txDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    return 'Today';
   } else if (isYesterday) {
     return 'Yesterday';
   } else {
-    return txDate.toLocaleDateString();
+    return txDate.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
   }
 }
 
@@ -60,7 +64,7 @@ const TransactionItem = ({ transaction }: TransactionItemProps) => {
     <div className="flex items-center justify-between py-2">
       <div className="flex items-center">
         <div className="w-8 h-8 rounded-md bg-surfaceDark border border-border flex items-center justify-center mr-3">
-          {transactionIcons[transaction.icon] || <div className="h-4 w-4 text-muted-foreground" />}
+          {transaction.icon && transactionIcons[transaction.icon] || <div className="h-4 w-4 text-muted-foreground" />}
         </div>
         <div>
           <h3 className="font-medium">{transaction.description}</h3>

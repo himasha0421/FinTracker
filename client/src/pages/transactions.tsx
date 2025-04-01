@@ -40,9 +40,7 @@ function formatDate(date: Date | string) {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+    day: 'numeric'
   });
 }
 
@@ -66,7 +64,7 @@ const TransactionRow = ({ transaction, onEdit }: TransactionRowProps) => {
       <td className="p-3">
         <div className="flex items-center">
           <div className="w-8 h-8 rounded-md bg-background border border-border flex items-center justify-center mr-3">
-            {transactionIcons[transaction.icon] || <div className="h-4 w-4 text-muted-foreground" />}
+            {transaction.icon && transactionIcons[transaction.icon] || <div className="h-4 w-4 text-muted-foreground" />}
           </div>
           <div>
             <div className="font-medium">{transaction.description}</div>
@@ -106,7 +104,7 @@ export default function Transactions() {
   };
   
   // Filter and sort transactions
-  const filteredTransactions = transactions?.filter((transaction: Transaction) => {
+  const filteredTransactions = transactions && Array.isArray(transactions) ? transactions.filter((transaction: Transaction) => {
     // Search term filter
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (transaction.category && transaction.category.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -121,7 +119,7 @@ export default function Transactions() {
     const dateB = new Date(b.date).getTime();
     
     return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
-  });
+  }) : [];
   
   return (
     <>

@@ -30,27 +30,41 @@ import { useFinance } from "@/lib/context";
 import { useQuery } from "@tanstack/react-query";
 import type { Transaction, Account } from "@shared/schema";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { format } from "date-fns";
 
 // Form schema for transactions
 const transactionFormSchema = z.object({
   description: z.string().min(1, "Description is required"),
-  amount: z.string().refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Amount must be a positive number" }
-  ),
-  accountId: z.string().refine(
-    (val) => !isNaN(Number(val)),
-    { message: "Please select an account" }
-  ),
+  amount: z
+    .string()
+    .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: "Amount must be a positive number",
+    }),
+  accountId: z
+    .string()
+    .refine((val) => !isNaN(Number(val)), {
+      message: "Please select an account",
+    }),
   category: z.string().optional(),
   type: z.enum(["income", "expense"]),
-  icon: z.enum(["shopping-bag", "briefcase", "film", "database", "server", "shopping-cart"]),
-  date: z.string().refine(
-    (val) => !isNaN(Date.parse(val)),
-    { message: "Please enter a valid date" }
-  )
+  icon: z.enum([
+    "shopping-bag",
+    "briefcase",
+    "film",
+    "database",
+    "server",
+    "shopping-cart",
+  ]),
+  date: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "Please enter a valid date",
+    }),
 });
 
 const transactionTypes = [
@@ -85,56 +99,70 @@ type TransactionFormProps = {
   transaction?: Transaction | null;
 };
 
-export default function TransactionForm({ isOpen, onClose, transaction = null }: TransactionFormProps) {
-  const { addTransaction, updateTransaction, deleteTransaction, isLoading } = useFinance();
+export default function TransactionForm({
+  isOpen,
+  onClose,
+  transaction = null,
+}: TransactionFormProps) {
+  const { addTransaction, updateTransaction, deleteTransaction, isLoading } =
+    useFinance();
 
   // Fetch accounts for the account selection
   const { data: accounts = [] } = useQuery<Account[]>({
-    queryKey: ['/api/accounts'],
+    queryKey: ["/api/accounts"],
   });
 
   // Format date for form default value with CST timezone adjustment
   const formatDateForInput = (date: string | Date) => {
     // Create a new Date object
-    const d = new Date(date);
+    const d = typeof date === 'string' ? new Date(date) : date;
     
-    // Add CST timezone offset (CST is UTC-6)
-    // This converts the date to CST to avoid timezone issues
-    const cstDate = new Date(d.getTime() + (6 * 60 * 60 * 1000));
-    
-    // Format the date in YYYY-MM-DD format
-    const year = cstDate.getFullYear();
-    const month = String(cstDate.getMonth() + 1).padStart(2, '0');
-    const day = String(cstDate.getDate()).padStart(2, '0');
-    
+    // Get date parts in CST timezone by creating a date with explicit parts
+    // This ensures we're working with the actual date the user wants
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+
+    // Return a date string in YYYY-MM-DD format
     return `${year}-${month}-${day}`;
   };
 
   const form = useForm<z.infer<typeof transactionFormSchema>>({
     resolver: zodResolver(transactionFormSchema),
-    values: transaction ? {
-      description: transaction.description,
-      amount: transaction.amount.toString(),
-      accountId: transaction.accountId.toString(),
-      category: transaction.category || "",
-      type: transaction.type as "income" | "expense",
-      icon: (transaction.icon as "shopping-bag" | "briefcase" | "film" | "database" | "server" | "shopping-cart") || "shopping-bag",
-      date: formatDateForInput(transaction.date),
-    } : {
-      description: "",
-      amount: "0",
-      type: "expense" as const,
-      date: formatDateForInput(new Date()),
-      icon: "shopping-bag" as const,
-      category: "",
-      accountId: accounts.length > 0 ? accounts[0].id.toString() : "",
-    },
+    values: transaction
+      ? {
+          description: transaction.description,
+          amount: transaction.amount.toString(),
+          accountId: transaction.accountId.toString(),
+          category: transaction.category || "",
+          type: transaction.type as "income" | "expense",
+          icon:
+            (transaction.icon as
+              | "shopping-bag"
+              | "briefcase"
+              | "film"
+              | "database"
+              | "server"
+              | "shopping-cart") || "shopping-bag",
+          date: formatDateForInput(transaction.date),
+        }
+      : {
+          description: "",
+          amount: "0",
+          type: "expense" as const,
+          date: formatDateForInput(new Date()),
+          icon: "shopping-bag" as const,
+          category: "",
+          accountId: accounts.length > 0 ? accounts[0].id.toString() : "",
+        },
   });
 
   const onSubmit = async (data: z.infer<typeof transactionFormSchema>) => {
     // Make sure the date string is in YYYY-MM-DD format for consistent server-side parsing
-    const dateStr = data.date ? formatDateForInput(new Date(data.date)) : formatDateForInput(new Date());
-    
+    const dateStr = data.date
+      ? formatDateForInput(new Date(data.date))
+      : formatDateForInput(new Date());
+
     // Prepare the data with proper type handling
     const formattedData = {
       description: data.description,
@@ -143,7 +171,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
       date: dateStr, // Ensure consistent YYYY-MM-DD format for server-side parsing
       category: data.category || undefined,
       type: data.type,
-      icon: data.icon
+      icon: data.icon,
     };
 
     console.log("Submitting transaction with date:", dateStr);
@@ -159,7 +187,7 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
       console.error("Error submitting transaction:", error);
     }
   };
-  
+
   const handleDelete = async () => {
     if (transaction) {
       try {
@@ -175,7 +203,9 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{transaction ? "Edit Transaction" : "Add New Transaction"}</DialogTitle>
+          <DialogTitle>
+            {transaction ? "Edit Transaction" : "Add New Transaction"}
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -202,7 +232,13 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                   <FormItem className="flex-1">
                     <FormLabel>Amount</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -221,8 +257,12 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                           <Button
                             variant="outline"
                             className="w-full flex justify-between font-normal"
-                            >
-                            {field.value ? format(new Date(field.value), "MMMM do, yyyy") : <span>Pick a date</span>}
+                          >
+                            {field.value ? (
+                              format(new Date(field.value), "MMMM do, yyyy")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
                             <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
@@ -230,7 +270,10 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
+                          selected={
+                            field.value ? new Date(field.value) : undefined
+                          }
+                          defaultMonth={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => {
                             if (date) {
                               // Force to CST (UTC-6) timezone with noon time to avoid midnight issues
@@ -239,17 +282,27 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                                 date.getFullYear(),
                                 date.getMonth(),
                                 date.getDate(),
-                                12, 0, 0  // Setting to noon to avoid any timezone issues
+                                12,
+                                0,
+                                0, // Setting to noon to avoid any timezone issues
                               );
-                              // Add offset for CST (UTC-6)
-                              const offsetDate = new Date(cstDate.getTime() + (6 * 60 * 60 * 1000));
-                              
-                              const formattedDate = formatDateForInput(offsetDate);
-                              console.log("Selected date:", date, "CST date:", offsetDate, "Formatted:", formattedDate);
+                              // Persist as ISO string for better cross-browser compatibility
+                              const formattedDate = formatDateForInput(cstDate);
+                              console.log(
+                                "Selected date:",
+                                date,
+                                "CST date:",
+                                cstDate,
+                                "Formatted:",
+                                formattedDate,
+                              );
                               field.onChange(formattedDate);
                             }
                           }}
-                          disabled={(date) => date > new Date("2100-01-01") || date < new Date("1900-01-01")}
+                          disabled={(date) =>
+                            date > new Date("2100-01-01") ||
+                            date < new Date("1900-01-01")
+                          }
                           initialFocus
                         />
                       </PopoverContent>
@@ -305,7 +358,10 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                     </FormControl>
                     <SelectContent>
                       {accounts.map((account: Account) => (
-                        <SelectItem key={account.id} value={account.id.toString()}>
+                        <SelectItem
+                          key={account.id}
+                          value={account.id.toString()}
+                        >
                           {account.name}
                         </SelectItem>
                       ))}
@@ -334,7 +390,10 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
                       </FormControl>
                       <SelectContent>
                         {categoryOptions.map((category) => (
-                          <SelectItem key={category.value} value={category.value}>
+                          <SelectItem
+                            key={category.value}
+                            value={category.value}
+                          >
                             {category.label}
                           </SelectItem>
                         ))}
@@ -377,24 +436,35 @@ export default function TransactionForm({ isOpen, onClose, transaction = null }:
             <DialogFooter className="flex justify-between">
               <div className="flex gap-2 items-center">
                 {transaction && (
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
-                    onClick={handleDelete} 
-                    disabled={isLoading} 
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={isLoading}
                     className="mr-auto"
                   >
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                    {isLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-2 h-4 w-4" />
+                    )}
                     Delete
                   </Button>
                 )}
               </div>
               <div className="flex gap-2 items-center">
-                <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={isLoading}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   {transaction ? "Update" : "Create"}
                 </Button>
               </div>
