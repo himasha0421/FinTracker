@@ -276,26 +276,26 @@ export default function TransactionForm({
                           defaultMonth={field.value ? new Date(field.value) : undefined}
                           onSelect={(date) => {
                             if (date) {
-                              // Force to CST (UTC-6) timezone with noon time to avoid midnight issues
-                              // This ensures the exact day shows correctly in CST timezone
-                              const cstDate = new Date(
-                                date.getFullYear(),
-                                date.getMonth(),
-                                date.getDate(),
-                                12,
-                                0,
-                                0, // Setting to noon to avoid any timezone issues
-                              );
-                              // Persist as ISO string for better cross-browser compatibility
-                              const formattedDate = formatDateForInput(cstDate);
+                              // Important: DO NOT manipulate the date object's day here
+                              // Use the exact selected date to avoid off-by-one errors
+                              
+                              // Format the exact selected date to YYYY-MM-DD
+                              const day = date.getDate();
+                              const month = date.getMonth() + 1;
+                              const year = date.getFullYear();
+                              
+                              // Create our date string in YYYY-MM-DD format
+                              const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                              
                               console.log(
-                                "Selected date:",
+                                "Selected exact date:",
                                 date,
-                                "CST date:",
-                                cstDate,
-                                "Formatted:",
-                                formattedDate,
+                                "Day:", day,
+                                "Month:", month,
+                                "Year:", year,
+                                "Formatted:", formattedDate
                               );
+                              
                               field.onChange(formattedDate);
                             }
                           }}

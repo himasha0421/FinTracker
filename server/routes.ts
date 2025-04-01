@@ -179,17 +179,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert string date to Date object if present with timezone handling
       const requestData = { ...req.body };
       if (requestData.date && typeof requestData.date === 'string') {
-        // Parse the date string in YYYY-MM-DD format (CST timezone)
-        // Force the date to use CST (UTC-6) timezone to match frontend
-        const [year, month, day] = requestData.date.split('-').map(Number);
-        if (year && month && day) {
-          // Create a date at noon to avoid timezone boundary issues
-          // Set it to noon CST which is 18:00 UTC to ensure consistency
-          const adjustedDate = new Date(Date.UTC(year, month - 1, day, 18, 0, 0));
-          console.log("Original date string:", requestData.date, "CST adjusted date:", adjustedDate);
-          requestData.date = adjustedDate;
-        } else {
-          // Fallback if the format is not as expected
+        // Parse the date string in YYYY-MM-DD format
+        // Important: Use the exact date the user selected
+        try {
+          const [year, month, day] = requestData.date.split('-').map(Number);
+          if (year && month && day) {
+            // Use noon UTC to avoid any timezone edge cases
+            const adjustedDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+            console.log("Original date string:", requestData.date, "Adjusted date:", adjustedDate);
+            requestData.date = adjustedDate;
+          } else {
+            // Fallback if the format is not as expected
+            requestData.date = new Date(requestData.date);
+          }
+        } catch (error) {
+          console.error("Error parsing date:", error);
           requestData.date = new Date(requestData.date);
         }
       }
@@ -221,17 +225,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert string date to Date object if present with timezone handling
       const requestData = { ...req.body };
       if (requestData.date && typeof requestData.date === 'string') {
-        // Parse the date string in YYYY-MM-DD format (CST timezone)
-        // Force the date to use CST (UTC-6) timezone to match frontend
-        const [year, month, day] = requestData.date.split('-').map(Number);
-        if (year && month && day) {
-          // Create a date at noon to avoid timezone boundary issues
-          // Set it to noon CST which is 18:00 UTC to ensure consistency
-          const adjustedDate = new Date(Date.UTC(year, month - 1, day, 18, 0, 0));
-          console.log("Original date string:", requestData.date, "CST adjusted date:", adjustedDate);
-          requestData.date = adjustedDate;
-        } else {
-          // Fallback if the format is not as expected
+        // Parse the date string in YYYY-MM-DD format
+        // Important: Use the exact date the user selected
+        try {
+          const [year, month, day] = requestData.date.split('-').map(Number);
+          if (year && month && day) {
+            // Use noon UTC to avoid any timezone edge cases
+            const adjustedDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+            console.log("Original date string:", requestData.date, "Adjusted date:", adjustedDate);
+            requestData.date = adjustedDate;
+          } else {
+            // Fallback if the format is not as expected
+            requestData.date = new Date(requestData.date);
+          }
+        } catch (error) {
+          console.error("Error parsing date:", error);
           requestData.date = new Date(requestData.date);
         }
       }
@@ -329,7 +337,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert string date to Date object if present
       const requestData = { ...req.body };
       if (requestData.targetDate && typeof requestData.targetDate === 'string') {
-        requestData.targetDate = new Date(requestData.targetDate);
+        // Parse the date string in YYYY-MM-DD format
+        try {
+          const [year, month, day] = requestData.targetDate.split('-').map(Number);
+          if (year && month && day) {
+            // Use noon UTC to avoid any timezone edge cases
+            const adjustedDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+            console.log("Original target date string:", requestData.targetDate, "Adjusted date:", adjustedDate);
+            requestData.targetDate = adjustedDate;
+          } else {
+            // Fallback if the format is not as expected
+            requestData.targetDate = new Date(requestData.targetDate);
+          }
+        } catch (error) {
+          console.error("Error parsing target date:", error);
+          requestData.targetDate = new Date(requestData.targetDate);
+        }
       }
       
       const goalData = insertFinancialGoalSchema.parse(requestData);
@@ -361,7 +384,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert string date to Date object if present
       const requestData = { ...req.body };
       if (requestData.targetDate && typeof requestData.targetDate === 'string') {
-        requestData.targetDate = new Date(requestData.targetDate);
+        // Parse the date string in YYYY-MM-DD format
+        try {
+          const [year, month, day] = requestData.targetDate.split('-').map(Number);
+          if (year && month && day) {
+            // Use noon UTC to avoid any timezone edge cases
+            const adjustedDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+            console.log("Original target date string:", requestData.targetDate, "Adjusted date:", adjustedDate);
+            requestData.targetDate = adjustedDate;
+          } else {
+            // Fallback if the format is not as expected
+            requestData.targetDate = new Date(requestData.targetDate);
+          }
+        } catch (error) {
+          console.error("Error parsing target date:", error);
+          requestData.targetDate = new Date(requestData.targetDate);
+        }
       }
       
       const goalData = insertFinancialGoalSchema.partial().parse(requestData);
