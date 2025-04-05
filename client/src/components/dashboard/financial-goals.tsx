@@ -1,43 +1,39 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { 
-  Card,
-  CardContent,
-  CardFooter
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import { Plus, Calendar, Shield, TrendingUp, CreditCard, ExternalLink } from "lucide-react";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import { Plus, Calendar, Shield, TrendingUp, CreditCard, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
-import type { FinancialGoal } from "@shared/schema";
-import GoalForm from "@/components/forms/goal-form";
+import type { FinancialGoal } from '@shared/schema';
+import GoalForm from '@/components/forms/goal-form';
 
 // Map of goal icons
 const goalIcons: Record<string, JSX.Element> = {
-  "shield": <Shield className="h-4 w-4" />,
-  "trending-up": <TrendingUp className="h-4 w-4" />,
-  "credit-card": <CreditCard className="h-4 w-4" />
+  shield: <Shield className="h-4 w-4" />,
+  'trending-up': <TrendingUp className="h-4 w-4" />,
+  'credit-card': <CreditCard className="h-4 w-4" />,
 };
 
 const statusClasses: Record<string, string> = {
-  "in-progress": "bg-blue-500 bg-opacity-20 text-blue-400",
-  "completed": "bg-green-500 bg-opacity-20 text-green-400",
-  "pending": "bg-yellow-500 bg-opacity-20 text-yellow-400"
+  'in-progress': 'bg-blue-500 bg-opacity-20 text-blue-400',
+  completed: 'bg-green-500 bg-opacity-20 text-green-400',
+  pending: 'bg-yellow-500 bg-opacity-20 text-yellow-400',
 };
 
 const statusLabels: Record<string, string> = {
-  "in-progress": "In-progress",
-  "completed": "Completed",
-  "pending": "Pending"
+  'in-progress': 'In-progress',
+  completed: 'Completed',
+  pending: 'Pending',
 };
 
 const colorClasses: Record<string, string> = {
-  "blue": "bg-blue-500 text-blue-400",
-  "green": "bg-green-500 text-green-400",
-  "yellow": "bg-yellow-500 text-yellow-400",
-  "purple": "bg-purple-500 text-purple-400",
-  "red": "bg-red-500 text-red-400"
+  blue: 'bg-blue-500 text-blue-400',
+  green: 'bg-green-500 text-green-400',
+  yellow: 'bg-yellow-500 text-yellow-400',
+  purple: 'bg-purple-500 text-purple-400',
+  red: 'bg-red-500 text-red-400',
 };
 
 type GoalCardProps = {
@@ -47,28 +43,30 @@ type GoalCardProps = {
 
 const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
   const progress = Math.round((Number(goal.currentAmount) / Number(goal.targetAmount)) * 100);
-  
+
   const formattedTargetAmount = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(Number(goal.targetAmount));
-  
+
   const targetDate = new Date(goal.targetDate);
   const formattedTargetDate = format(targetDate, 'MMM yyyy');
-  
-  const iconClass = goalIcons[goal.icon] ? goal.icon : "shield";
+
+  const iconClass = goalIcons[goal.icon] ? goal.icon : 'shield';
   const iconColorClass = colorClasses[goal.color] || colorClasses.blue;
-  const statusClass = statusClasses[goal.status] || statusClasses["in-progress"];
-  const statusLabel = statusLabels[goal.status] || "In Progress";
-  
+  const statusClass = statusClasses[goal.status] || statusClasses['in-progress'];
+  const statusLabel = statusLabels[goal.status] || 'In Progress';
+
   return (
     <Card className="w-full">
       <CardContent className="pt-6">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center">
-            <div className={`w-8 h-8 rounded-full ${iconColorClass} bg-opacity-20 flex items-center justify-center mr-3`}>
+            <div
+              className={`w-8 h-8 rounded-full ${iconColorClass} bg-opacity-20 flex items-center justify-center mr-3`}
+            >
               {goalIcons[iconClass]}
             </div>
             <h3 className="font-semibold">{goal.name}</h3>
@@ -77,9 +75,9 @@ const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
             {statusLabel}
           </span>
         </div>
-        
+
         <p className="text-sm text-muted-foreground mb-4">{goal.description}</p>
-        
+
         <div className="mb-3">
           <div className="flex justify-between text-sm mb-1">
             <span>Progress</span>
@@ -87,24 +85,25 @@ const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
           </div>
           <Progress value={progress} className="h-2" />
         </div>
-        
+
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm text-muted-foreground">
-            <span className="font-mono font-medium text-foreground">{formattedTargetAmount}</span> target
+            <span className="font-mono font-medium text-foreground">{formattedTargetAmount}</span>{' '}
+            target
           </div>
         </div>
-        
+
         <div className="flex items-center text-sm text-muted-foreground">
           <Calendar className="h-4 w-4 mr-1" />
           Target: {formattedTargetDate}
         </div>
       </CardContent>
-      
+
       <CardFooter className="pt-0">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="text-muted-foreground hover:text-foreground" 
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-foreground"
           onClick={() => onEdit(goal)}
         >
           <ExternalLink className="h-4 w-4 mr-1" />
@@ -118,34 +117,34 @@ const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
 export default function FinancialGoals() {
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
-  
+
   const { data: goals, isLoading } = useQuery({
-    queryKey: ['/api/goals']
+    queryKey: ['/api/goals'],
   });
-  
+
   const handleAddGoal = () => {
     setEditingGoal(null);
     setIsGoalFormOpen(true);
   };
-  
+
   const handleEditGoal = (goal: FinancialGoal) => {
     setEditingGoal(goal);
     setIsGoalFormOpen(true);
   };
-  
+
   const handleFormClose = () => {
     setIsGoalFormOpen(false);
     setEditingGoal(null);
   };
-  
+
   return (
     <>
       <div className="mt-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Upcoming Events</h2>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="text-primary hover:text-primary/90"
             onClick={handleAddGoal}
           >
@@ -153,7 +152,7 @@ export default function FinancialGoals() {
             Add Goal
           </Button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, index) => (
@@ -184,12 +183,8 @@ export default function FinancialGoals() {
           )}
         </div>
       </div>
-      
-      <GoalForm 
-        isOpen={isGoalFormOpen} 
-        onClose={handleFormClose} 
-        goal={editingGoal} 
-      />
+
+      <GoalForm isOpen={isGoalFormOpen} onClose={handleFormClose} goal={editingGoal} />
     </>
   );
 }

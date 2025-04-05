@@ -1,13 +1,17 @@
-import { 
-  Account, 
-  InsertAccount, 
-  Transaction, 
-  InsertTransaction, 
-  FinancialGoal, 
-  InsertFinancialGoal, 
-  User, 
-  InsertUser 
-} from "@shared/schema";
+import {
+  Account,
+  InsertAccount,
+  Transaction,
+  InsertTransaction,
+  FinancialGoal,
+  InsertFinancialGoal,
+  User,
+  InsertUser,
+} from '@shared/schema';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 export interface IStorage {
   // User operations
@@ -28,14 +32,20 @@ export interface IStorage {
   getTransaction(id: number): Promise<Transaction | undefined>;
   getTransactionsByAccount(accountId: number): Promise<Transaction[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
-  updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction | undefined>;
+  updateTransaction(
+    id: number,
+    transaction: Partial<InsertTransaction>
+  ): Promise<Transaction | undefined>;
   deleteTransaction(id: number): Promise<boolean>;
 
   // Financial Goal operations
   getFinancialGoals(): Promise<FinancialGoal[]>;
   getFinancialGoal(id: number): Promise<FinancialGoal | undefined>;
   createFinancialGoal(goal: InsertFinancialGoal): Promise<FinancialGoal>;
-  updateFinancialGoal(id: number, goal: Partial<InsertFinancialGoal>): Promise<FinancialGoal | undefined>;
+  updateFinancialGoal(
+    id: number,
+    goal: Partial<InsertFinancialGoal>
+  ): Promise<FinancialGoal | undefined>;
   deleteFinancialGoal(id: number): Promise<boolean>;
 }
 
@@ -44,7 +54,7 @@ export class MemStorage implements IStorage {
   private accounts: Map<number, Account>;
   private transactions: Map<number, Transaction>;
   private financialGoals: Map<number, FinancialGoal>;
-  
+
   private userCurrentId: number;
   private accountCurrentId: number;
   private transactionCurrentId: number;
@@ -55,7 +65,7 @@ export class MemStorage implements IStorage {
     this.accounts = new Map();
     this.transactions = new Map();
     this.financialGoals = new Map();
-    
+
     this.userCurrentId = 1;
     this.accountCurrentId = 1;
     this.transactionCurrentId = 1;
@@ -71,9 +81,7 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    return Array.from(this.users.values()).find(user => user.username === username);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -94,12 +102,23 @@ export class MemStorage implements IStorage {
 
   async createAccount(insertAccount: InsertAccount): Promise<Account> {
     const id = this.accountCurrentId++;
-    const account: Account = { ...insertAccount, id };
+    // Ensure all required fields are present
+    const account: Account = {
+      ...insertAccount,
+      id,
+      description: insertAccount.description || null,
+      balance: insertAccount.balance || '0',
+      icon: insertAccount.icon || 'wallet',
+      color: insertAccount.color || 'green',
+    };
     this.accounts.set(id, account);
     return account;
   }
 
-  async updateAccount(id: number, accountData: Partial<InsertAccount>): Promise<Account | undefined> {
+  async updateAccount(
+    id: number,
+    accountData: Partial<InsertAccount>
+  ): Promise<Account | undefined> {
     const account = this.accounts.get(id);
     if (!account) return undefined;
 
@@ -125,9 +144,10 @@ export class MemStorage implements IStorage {
 
   // Transaction operations
   async getTransactions(limit?: number): Promise<Transaction[]> {
-    const transactions = Array.from(this.transactions.values())
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
+    const transactions = Array.from(this.transactions.values()).sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
     if (limit) {
       return transactions.slice(0, limit);
     }
@@ -146,49 +166,59 @@ export class MemStorage implements IStorage {
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
     const id = this.transactionCurrentId++;
-    const transaction: Transaction = { ...insertTransaction, id };
+    // Ensure all required fields are present
+    const transaction: Transaction = {
+      ...insertTransaction,
+      id,
+      date: insertTransaction.date || new Date(),
+      category: insertTransaction.category || null,
+      icon: insertTransaction.icon || 'credit-card',
+    };
     this.transactions.set(id, transaction);
-    
+
     // Update account balance
     const account = await this.getAccount(transaction.accountId);
     if (account) {
-      const balanceChange = transaction.type === 'income' 
-        ? Number(transaction.amount) 
-        : -Number(transaction.amount);
-      
+      const balanceChange =
+        transaction.type === 'income' ? Number(transaction.amount) : -Number(transaction.amount);
+
       await this.updateAccount(account.id, {
-        balance: String(Number(account.balance) + balanceChange)
+        balance: String(Number(account.balance) + balanceChange),
       });
     }
-    
+
     return transaction;
   }
 
-  async updateTransaction(id: number, transactionData: Partial<InsertTransaction>): Promise<Transaction | undefined> {
+  async updateTransaction(
+    id: number,
+    transactionData: Partial<InsertTransaction>
+  ): Promise<Transaction | undefined> {
     const transaction = this.transactions.get(id);
     if (!transaction) return undefined;
 
     // If amount or type changes, we need to update account balance
     if (transactionData.amount !== undefined || transactionData.type !== undefined) {
       const account = await this.getAccount(transaction.accountId);
-      
+
       if (account) {
         // Revert the old transaction impact
-        const oldBalanceChange = transaction.type === 'income' 
-          ? -Number(transaction.amount) 
-          : Number(transaction.amount);
-        
+        const oldBalanceChange =
+          transaction.type === 'income' ? -Number(transaction.amount) : Number(transaction.amount);
+
         // Calculate new transaction impact
-        const newAmount = transactionData.amount !== undefined ? Number(transactionData.amount) : Number(transaction.amount);
-        const newType = transactionData.type !== undefined ? transactionData.type : transaction.type;
-        
-        const newBalanceChange = newType === 'income' 
-          ? Number(newAmount) 
-          : -Number(newAmount);
-        
+        const newAmount =
+          transactionData.amount !== undefined
+            ? Number(transactionData.amount)
+            : Number(transaction.amount);
+        const newType =
+          transactionData.type !== undefined ? transactionData.type : transaction.type;
+
+        const newBalanceChange = newType === 'income' ? Number(newAmount) : -Number(newAmount);
+
         // Apply the net change
         await this.updateAccount(account.id, {
-          balance: String(Number(account.balance) + oldBalanceChange + newBalanceChange)
+          balance: String(Number(account.balance) + oldBalanceChange + newBalanceChange),
         });
       }
     }
@@ -205,12 +235,11 @@ export class MemStorage implements IStorage {
     // Update account balance
     const account = await this.getAccount(transaction.accountId);
     if (account) {
-      const balanceChange = transaction.type === 'income' 
-        ? -Number(transaction.amount) 
-        : Number(transaction.amount);
-      
+      const balanceChange =
+        transaction.type === 'income' ? -Number(transaction.amount) : Number(transaction.amount);
+
       await this.updateAccount(account.id, {
-        balance: String(Number(account.balance) + balanceChange)
+        balance: String(Number(account.balance) + balanceChange),
       });
     }
 
@@ -228,17 +257,29 @@ export class MemStorage implements IStorage {
 
   async createFinancialGoal(insertGoal: InsertFinancialGoal): Promise<FinancialGoal> {
     const id = this.goalCurrentId++;
-    const goal: FinancialGoal = { ...insertGoal, id };
+    // Ensure all required fields are present
+    const goal: FinancialGoal = {
+      ...insertGoal,
+      id,
+      description: insertGoal.description || null,
+      currentAmount: insertGoal.currentAmount || '0',
+      status: insertGoal.status || 'pending',
+      icon: insertGoal.icon || 'target',
+      color: insertGoal.color || 'blue',
+    };
     this.financialGoals.set(id, goal);
     return goal;
   }
 
-  async updateFinancialGoal(id: number, goalData: Partial<InsertFinancialGoal>): Promise<FinancialGoal | undefined> {
+  async updateFinancialGoal(
+    id: number,
+    goalData: Partial<InsertFinancialGoal>
+  ): Promise<FinancialGoal | undefined> {
     const goal = this.financialGoals.get(id);
     if (!goal) return undefined;
 
     const updatedGoal = { ...goal, ...goalData };
-    
+
     // Only update status based on progress if status was not explicitly provided
     if (goalData.currentAmount !== undefined && goalData.status === undefined) {
       const progress = Number(updatedGoal.currentAmount) / Number(updatedGoal.targetAmount);
@@ -250,7 +291,7 @@ export class MemStorage implements IStorage {
         updatedGoal.status = 'pending';
       }
     }
-    
+
     this.financialGoals.set(id, updatedGoal);
     return updatedGoal;
   }
@@ -263,163 +304,172 @@ export class MemStorage implements IStorage {
   private seedData() {
     // Create accounts
     this.createAccount({
-      name: "Main Savings",
-      description: "Personal savings",
-      balance: "8459.45",
-      type: "savings",
-      icon: "wallet",
-      color: "green"
+      name: 'Main Savings',
+      description: 'Personal savings',
+      balance: '8459.45',
+      type: 'savings',
+      icon: 'wallet',
+      color: 'green',
     });
 
     this.createAccount({
-      name: "Checking Account",
-      description: "Daily expenses",
-      balance: "2850.00",
-      type: "checking",
-      icon: "scale",
-      color: "blue"
+      name: 'Checking Account',
+      description: 'Daily expenses',
+      balance: '2850.00',
+      type: 'checking',
+      icon: 'scale',
+      color: 'blue',
     });
 
     this.createAccount({
-      name: "Investment Portfolio",
-      description: "Stocks & ETFs",
-      balance: "15230.80",
-      type: "investment",
-      icon: "plus-square",
-      color: "purple"
+      name: 'Investment Portfolio',
+      description: 'Stocks & ETFs',
+      balance: '15230.80',
+      type: 'investment',
+      icon: 'plus-square',
+      color: 'purple',
     });
 
     this.createAccount({
-      name: "Credit Card",
-      description: "Pending charges",
-      balance: "1300.00",
-      type: "credit",
-      icon: "credit-card",
-      color: "red"
+      name: 'Credit Card',
+      description: 'Pending charges',
+      balance: '1300.00',
+      type: 'credit',
+      icon: 'credit-card',
+      color: 'red',
     });
 
     this.createAccount({
-      name: "Savings Account",
-      description: "Emergency fund",
-      balance: "3000.00",
-      type: "savings",
-      icon: "wallet",
-      color: "green"
+      name: 'Savings Account',
+      description: 'Emergency fund',
+      balance: '3000.00',
+      type: 'savings',
+      icon: 'wallet',
+      color: 'green',
     });
 
     // Create transactions
     const now = new Date();
-    
+
     this.createTransaction({
-      description: "Salary Deposit",
-      amount: "4500.00",
+      description: 'Salary Deposit',
+      amount: '4500.00',
       date: new Date(now.setHours(9, 0, 0, 0)),
       accountId: 1,
-      category: "Income",
-      type: "income",
-      icon: "briefcase"
+      category: 'Income',
+      type: 'income',
+      icon: 'briefcase',
     });
-    
+
     now.setHours(14, 45, 0, 0);
     this.createTransaction({
-      description: "Apple Store Purchase",
-      amount: "999.00",
+      description: 'Apple Store Purchase',
+      amount: '999.00',
       date: new Date(now.setHours(14, 45, 0, 0)),
       accountId: 2,
-      category: "Electronics",
-      type: "expense",
-      icon: "shopping-bag"
+      category: 'Electronics',
+      type: 'expense',
+      icon: 'shopping-bag',
     });
-    
+
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     this.createTransaction({
-      description: "Netflix Subscription",
-      amount: "15.99",
+      description: 'Netflix Subscription',
+      amount: '15.99',
       date: yesterday,
       accountId: 2,
-      category: "Entertainment",
-      type: "expense",
-      icon: "film"
+      category: 'Entertainment',
+      type: 'expense',
+      icon: 'film',
     });
-    
+
     this.createTransaction({
-      description: "Superbase Subscription",
-      amount: "12.99",
+      description: 'Superbase Subscription',
+      amount: '12.99',
       date: yesterday,
       accountId: 2,
-      category: "Software",
-      type: "expense",
-      icon: "database"
+      category: 'Software',
+      type: 'expense',
+      icon: 'database',
     });
-    
+
     this.createTransaction({
-      description: "Vercel Subscription",
-      amount: "15.99",
+      description: 'Vercel Subscription',
+      amount: '15.99',
       date: yesterday,
       accountId: 2,
-      category: "Software",
-      type: "expense",
-      icon: "server"
+      category: 'Software',
+      type: 'expense',
+      icon: 'server',
     });
-    
+
     this.createTransaction({
-      description: "Groceries",
-      amount: "250.00",
+      description: 'Groceries',
+      amount: '250.00',
       date: new Date(yesterday.setHours(17, 30, 0, 0)),
       accountId: 2,
-      category: "Food",
-      type: "expense",
-      icon: "shopping-cart"
+      category: 'Food',
+      type: 'expense',
+      icon: 'shopping-cart',
     });
-    
+
     // Create financial goals
     const decTarget = new Date();
     decTarget.setMonth(11, 31);
     decTarget.setFullYear(2024);
-    
+
     this.createFinancialGoal({
-      name: "Emergency Fund",
-      description: "3 months of expenses saved",
-      targetAmount: "15000.00",
-      currentAmount: "9750.00", // 65% progress
+      name: 'Emergency Fund',
+      description: '3 months of expenses saved',
+      targetAmount: '15000.00',
+      currentAmount: '9750.00', // 65% progress
       targetDate: decTarget,
-      status: "in-progress",
-      icon: "shield",
-      color: "blue"
+      status: 'in-progress',
+      icon: 'shield',
+      color: 'blue',
     });
-    
+
     const junTarget = new Date();
     junTarget.setMonth(5, 30);
     junTarget.setFullYear(2024);
-    
+
     this.createFinancialGoal({
-      name: "Stock Portfolio",
-      description: "Tech sector investment plan",
-      targetAmount: "50000.00",
-      currentAmount: "15000.00", // 30% progress
+      name: 'Stock Portfolio',
+      description: 'Tech sector investment plan',
+      targetAmount: '50000.00',
+      currentAmount: '15000.00', // 30% progress
       targetDate: junTarget,
-      status: "pending",
-      icon: "trending-up",
-      color: "yellow"
+      status: 'pending',
+      icon: 'trending-up',
+      color: 'yellow',
     });
-    
+
     const marTarget = new Date();
     marTarget.setMonth(2, 31);
     marTarget.setFullYear(2025);
-    
+
     this.createFinancialGoal({
-      name: "Debt Repayment",
-      description: "Student loan payoff plan",
-      targetAmount: "25000.00",
-      currentAmount: "11250.00", // 45% progress
+      name: 'Debt Repayment',
+      description: 'Student loan payoff plan',
+      targetAmount: '25000.00',
+      currentAmount: '11250.00', // 45% progress
       targetDate: marTarget,
-      status: "in-progress",
-      icon: "credit-card",
-      color: "blue"
+      status: 'in-progress',
+      icon: 'credit-card',
+      color: 'blue',
     });
   }
 }
 
-export const storage = new MemStorage();
+// Import PostgreSQL storage implementation
+import { PostgresStorage } from './postgres-storage';
+
+// Choose storage implementation based on environment
+const usePostgres = process.env.STORAGE_TYPE === 'postgres';
+
+// Create and export the appropriate storage implementation
+export const storage = usePostgres ? new PostgresStorage() : new MemStorage();
+
+console.log(`Using ${usePostgres ? 'PostgreSQL' : 'In-Memory'} storage`);

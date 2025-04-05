@@ -4,3 +4,6 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+ai_backend/venv
+.env
+ai_backend/.env

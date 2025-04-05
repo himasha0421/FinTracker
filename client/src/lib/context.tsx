@@ -136,19 +136,29 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const addTransaction = async (data: Omit<Transaction, 'id'>) => {
     setIsLoading(true);
     try {
+      console.log('Adding transaction to backend:', data); // Debug log
       await apiRequest('POST', '/api/transactions', data);
-      await refreshData();
+      console.log('Successfully added transaction, refreshing data...'); // Debug log
+
+      // Invalidate transactions query specifically
+      await queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+      // Refresh total balance
+      await fetchTotalBalance();
+
       toast({
         title: 'Success',
         description: 'Transaction added successfully',
+        duration: 3000,
       });
     } catch (error) {
       console.error('Error adding transaction:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add transaction',
+        description: 'Failed to add transaction: ' + (error as Error).message,
         variant: 'destructive',
+        duration: 5000,
       });
+      throw error; // Re-throw the error so it can be caught by the caller
     } finally {
       setIsLoading(false);
     }
@@ -275,11 +285,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     deleteFinancialGoal,
   };
 
-  return (
-    <FinanceContext.Provider value={value}>
-      {children}
-    </FinanceContext.Provider>
-  );
+  return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;
 }
 
 export function useFinance() {

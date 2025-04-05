@@ -1,4 +1,4 @@
-import { useFinance } from "@/lib/context";
+import { useFinance } from '@/lib/context';
 
 export default function BalanceSummary() {
   const { totalBalance } = useFinance();
@@ -8,7 +8,7 @@ export default function BalanceSummary() {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   }).format(totalBalance);
 
   return (

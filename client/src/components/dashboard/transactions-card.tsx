@@ -1,27 +1,29 @@
-import { useQuery } from "@tanstack/react-query";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardFooter 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, ShoppingBag, Briefcase, Film, Database, Server, ShoppingCart } from "lucide-react";
-import { Link } from "wouter";
-import type { Transaction } from "@shared/schema";
-import { useState } from "react";
-import TransactionForm from "@/components/forms/transaction-form";
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  ChevronRight,
+  ShoppingBag,
+  Briefcase,
+  Film,
+  Database,
+  Server,
+  ShoppingCart,
+} from 'lucide-react';
+import { Link } from 'wouter';
+import type { Transaction } from '@shared/schema';
+import { useState } from 'react';
+import TransactionForm from '@/components/forms/transaction-form';
 
 // Map of transaction icons
 const transactionIcons: Record<string, JSX.Element> = {
-  "shopping-bag": <ShoppingBag className="h-4 w-4 text-muted-foreground" />,
-  "briefcase": <Briefcase className="h-4 w-4 text-muted-foreground" />,
-  "film": <Film className="h-4 w-4 text-muted-foreground" />,
-  "database": <Database className="h-4 w-4 text-muted-foreground" />,
-  "server": <Server className="h-4 w-4 text-muted-foreground" />,
-  "shopping-cart": <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+  'shopping-bag': <ShoppingBag className="h-4 w-4 text-muted-foreground" />,
+  briefcase: <Briefcase className="h-4 w-4 text-muted-foreground" />,
+  film: <Film className="h-4 w-4 text-muted-foreground" />,
+  database: <Database className="h-4 w-4 text-muted-foreground" />,
+  server: <Server className="h-4 w-4 text-muted-foreground" />,
+  'shopping-cart': <ShoppingCart className="h-4 w-4 text-muted-foreground" />,
 };
 
 type TransactionItemProps = {
@@ -31,19 +33,20 @@ type TransactionItemProps = {
 function formatDate(date: Date | string) {
   const txDate = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
-  
+
   const isToday = txDate.toDateString() === now.toDateString();
-  const isYesterday = new Date(now.setDate(now.getDate() - 1)).toDateString() === txDate.toDateString();
-  
+  const isYesterday =
+    new Date(now.setDate(now.getDate() - 1)).toDateString() === txDate.toDateString();
+
   if (isToday) {
     return 'Today';
   } else if (isYesterday) {
     return 'Yesterday';
   } else {
-    return txDate.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return txDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   }
 }
@@ -53,7 +56,7 @@ const TransactionItem = ({ transaction }: TransactionItemProps) => {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   }).format(Number(transaction.amount));
 
   const isIncome = transaction.type === 'income';
@@ -64,16 +67,19 @@ const TransactionItem = ({ transaction }: TransactionItemProps) => {
     <div className="flex items-center justify-between py-2">
       <div className="flex items-center">
         <div className="w-8 h-8 rounded-md bg-surfaceDark border border-border flex items-center justify-center mr-3">
-          {transaction.icon && transactionIcons[transaction.icon] || <div className="h-4 w-4 text-muted-foreground" />}
+          {(transaction.icon && transactionIcons[transaction.icon]) || (
+            <div className="h-4 w-4 text-muted-foreground" />
+          )}
         </div>
         <div>
-          <h3 className="font-medium">{transaction.description}</h3>
-          <p className="text-xs text-muted-foreground">{formatDate(transaction.date)}</p>
+          <h3 className="font-medium"> {transaction.description} </h3>
+          <p className="text-xs text-muted-foreground"> {formatDate(transaction.date)} </p>
         </div>
       </div>
       <div className="text-right">
         <span className={`font-medium ${amountClass} font-mono`}>
-          {isIncome ? formattedPrefix : ''}{formattedAmount}
+          {isIncome ? formattedPrefix : ''}
+          {formattedAmount}
         </span>
       </div>
     </div>
@@ -82,14 +88,17 @@ const TransactionItem = ({ transaction }: TransactionItemProps) => {
 
 export default function TransactionsCard() {
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
-  
+
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['/api/transactions'],
     queryFn: async ({ queryKey }) => {
       const res = await fetch(`${queryKey[0]}?limit=6`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch transactions');
       return res.json();
-    }
+    },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Consider data stale immediately
   });
 
   const handleAddTransaction = () => {
@@ -100,7 +109,7 @@ export default function TransactionsCard() {
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>Recent Activity </CardTitle>
           <div className="text-sm text-muted-foreground">
             {!isLoading && transactions ? `${transactions.length} transactions` : '...'}
           </div>
@@ -125,21 +134,15 @@ export default function TransactionsCard() {
                 <TransactionItem key={transaction.id} transaction={transaction} />
               ))
             ) : (
-              <div className="py-3 text-center text-muted-foreground">
-                No transactions found.
-              </div>
+              <div className="py-3 text-center text-muted-foreground">No transactions found.</div>
             )}
           </div>
         </CardContent>
         <CardFooter>
-          <Button 
-            className="w-full" 
-            variant="outline"
-            asChild
-          >
+          <Button className="w-full" variant="outline" asChild>
             <Link href="/transactions">
               <div className="flex items-center justify-center w-full">
-                <span>View All Transactions</span>
+                <span>View All Transactions </span>
                 <ChevronRight className="ml-1 h-4 w-4" />
               </div>
             </Link>

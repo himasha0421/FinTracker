@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -6,29 +6,36 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Plus, Edit2, Trash2, FileText, Clock } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Plus, Edit2, Trash2, FileText, Clock } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Note schema
 const noteSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  content: z.string().min(1, "Content is required"),
+  title: z.string().min(1, 'Title is required'),
+  content: z.string().min(1, 'Content is required'),
 });
 
 type Note = {
@@ -42,75 +49,77 @@ type Note = {
 export default function Notes() {
   const [notes, setNotes] = useState<Note[]>([
     {
-      id: "1",
-      title: "Budget Planning for 2024",
-      content: "Need to review monthly expenses and set new budget categories. Focus on reducing discretionary spending and increasing savings rate.",
+      id: '1',
+      title: 'Budget Planning for 2024',
+      content:
+        'Need to review monthly expenses and set new budget categories. Focus on reducing discretionary spending and increasing savings rate.',
       createdAt: new Date(2023, 11, 15),
       updatedAt: new Date(2023, 11, 15),
     },
     {
-      id: "2",
-      title: "Investment Research",
-      content: "Research index funds with low expense ratios. Compare Vanguard, Fidelity, and Charles Schwab options. Consider increasing monthly contributions to retirement accounts.",
+      id: '2',
+      title: 'Investment Research',
+      content:
+        'Research index funds with low expense ratios. Compare Vanguard, Fidelity, and Charles Schwab options. Consider increasing monthly contributions to retirement accounts.',
       createdAt: new Date(2023, 10, 20),
       updatedAt: new Date(2023, 10, 28),
     },
   ]);
-  
+
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
+
   const { toast } = useToast();
-  
+
   const form = useForm<z.infer<typeof noteSchema>>({
     resolver: zodResolver(noteSchema),
     defaultValues: {
-      title: "",
-      content: "",
+      title: '',
+      content: '',
     },
   });
-  
+
   const handleAddNote = () => {
     setCurrentNote(null);
-    form.reset({ title: "", content: "" });
+    form.reset({ title: '', content: '' });
     setIsNoteDialogOpen(true);
   };
-  
+
   const handleEditNote = (note: Note) => {
     setCurrentNote(note);
     form.reset({ title: note.title, content: note.content });
     setIsNoteDialogOpen(true);
   };
-  
+
   const handleDeleteNote = (note: Note) => {
     setCurrentNote(note);
     setIsDeleteDialogOpen(true);
   };
-  
+
   const confirmDelete = () => {
     if (currentNote) {
       setNotes(notes.filter(note => note.id !== currentNote.id));
       setIsDeleteDialogOpen(false);
       setCurrentNote(null);
       toast({
-        title: "Note deleted",
-        description: "Your note has been successfully deleted.",
+        title: 'Note deleted',
+        description: 'Your note has been successfully deleted.',
       });
     }
   };
-  
+
   const onSubmit = (data: z.infer<typeof noteSchema>) => {
     if (currentNote) {
       // Update existing note
-      setNotes(notes.map(note => 
-        note.id === currentNote.id 
-          ? { ...note, ...data, updatedAt: new Date() } 
-          : note
-      ));
+      setNotes(
+        notes.map(note =>
+          note.id === currentNote.id ? { ...note, ...data, updatedAt: new Date() } : note
+        )
+      );
       toast({
-        title: "Note updated",
-        description: "Your note has been successfully updated.",
+        title: 'Note updated',
+        description: 'Your note has been successfully updated.',
       });
     } else {
       // Create new note
@@ -122,13 +131,13 @@ export default function Notes() {
       };
       setNotes([newNote, ...notes]);
       toast({
-        title: "Note created",
-        description: "Your new note has been successfully created.",
+        title: 'Note created',
+        description: 'Your new note has been successfully created.',
       });
     }
     setIsNoteDialogOpen(false);
   };
-  
+
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -146,7 +155,7 @@ export default function Notes() {
           Add Note
         </Button>
       </div>
-      
+
       {notes.length === 0 ? (
         <Card>
           <CardContent className="pt-10 pb-10 text-center">
@@ -173,9 +182,7 @@ export default function Notes() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
-                <p className="text-muted-foreground whitespace-pre-line">
-                  {note.content}
-                </p>
+                <p className="text-muted-foreground whitespace-pre-line">{note.content}</p>
               </CardContent>
               <CardFooter className="border-t pt-4 flex justify-between">
                 <Button variant="outline" size="sm" onClick={() => handleEditNote(note)}>
@@ -191,19 +198,19 @@ export default function Notes() {
           ))}
         </div>
       )}
-      
+
       {/* Add/Edit Note Dialog */}
       <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{currentNote ? "Edit Note" : "Add New Note"}</DialogTitle>
+            <DialogTitle>{currentNote ? 'Edit Note' : 'Add New Note'}</DialogTitle>
             <DialogDescription>
-              {currentNote 
-                ? "Update your financial note details." 
-                : "Create a new note for your financial planning."}
+              {currentNote
+                ? 'Update your financial note details.'
+                : 'Create a new note for your financial planning.'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -219,7 +226,7 @@ export default function Notes() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="content"
@@ -227,7 +234,7 @@ export default function Notes() {
                   <FormItem>
                     <FormLabel>Content</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Enter your note content here..."
                         className="min-h-[150px]"
                         {...field}
@@ -237,20 +244,18 @@ export default function Notes() {
                   </FormItem>
                 )}
               />
-              
+
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsNoteDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">
-                  {currentNote ? "Update Note" : "Create Note"}
-                </Button>
+                <Button type="submit">{currentNote ? 'Update Note' : 'Create Note'}</Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
@@ -260,14 +265,14 @@ export default function Notes() {
               Are you sure you want to delete this note? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           {currentNote && (
             <div className="border rounded-md p-3 bg-muted/50">
               <h4 className="font-medium mb-1">{currentNote.title}</h4>
               <p className="text-sm text-muted-foreground line-clamp-2">{currentNote.content}</p>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
