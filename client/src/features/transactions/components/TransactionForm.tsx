@@ -42,6 +42,22 @@ import {
 
 const iconValues = iconOptions.map(option => option.value) as [IconValue, ...IconValue[]];
 
+const resolveInitialIcon = (
+  transaction: Transaction | null | undefined
+): IconValue => {
+  if (!transaction) return 'shopping-bag';
+
+  const mapped = transaction.category ? categoryToIcon[transaction.category] : undefined;
+  const existing = iconValues.includes(transaction.icon as IconValue)
+    ? (transaction.icon as IconValue)
+    : undefined;
+
+  // Honor a non-default saved icon, otherwise prefer category mapping.
+  if (existing && existing !== 'shopping-bag') return existing;
+  if (mapped) return mapped;
+  return existing || 'shopping-bag';
+};
+
 // Form schema for transactions
 const transactionFormSchema = z.object({
   description: z.string().min(1, 'Description is required'),
@@ -104,9 +120,7 @@ export default function TransactionForm({
           accountId: transaction.accountId.toString(),
           category: transaction.category || '',
           type: transaction.type as 'income' | 'expense',
-          icon: (iconValues.includes(transaction.icon as IconValue)
-            ? (transaction.icon as IconValue)
-            : 'shopping-bag') as IconValue,
+          icon: resolveInitialIcon(transaction),
           date: formatDateForInput(transaction.date),
         }
       : {
@@ -316,7 +330,16 @@ export default function TransactionForm({
                 render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={value => {
+                        field.onChange(value);
+                        const mappedIcon = categoryToIcon[value];
+                        if (mappedIcon) {
+                          form.setValue('icon', mappedIcon, { shouldDirty: true });
+                        }
+                      }}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />

@@ -26,6 +26,8 @@ export const iconOptions = [
   { value: 'users', label: 'Friends & Gatherings', Icon: Users },
 ] as const;
 
+export type IconValue = (typeof iconOptions)[number]['value'];
+
 export const categoryOptions = [
   { value: 'Income', label: 'Income' },
   { value: 'Salary', label: 'Salary/Work' },
@@ -56,4 +58,21 @@ export const categoryToIcon: Record<string, IconValue> = {
   'Friends & Gatherings': 'users',
 };
 
-export type IconValue = (typeof iconOptions)[number]['value'];
+const iconValueSet = new Set<IconValue>(iconOptions.map(option => option.value));
+const placeholderIcons: IconValue[] = ['shopping-bag', 'credit-card'];
+
+export function resolveTransactionIconValue(transaction: {
+  category?: string | null;
+  icon?: string | null;
+}): IconValue {
+  const savedIcon = transaction.icon as IconValue | undefined;
+  const categoryIcon = transaction.category ? categoryToIcon[transaction.category] : undefined;
+
+  const hasValidSavedIcon = Boolean(savedIcon && iconValueSet.has(savedIcon));
+  const isCustomSavedIcon = hasValidSavedIcon && !placeholderIcons.includes(savedIcon as IconValue);
+
+  if (isCustomSavedIcon) return savedIcon as IconValue;
+  if (categoryIcon && iconValueSet.has(categoryIcon)) return categoryIcon;
+  if (hasValidSavedIcon) return savedIcon as IconValue;
+  return 'shopping-bag';
+}

@@ -2,31 +2,22 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  ChevronRight,
-  Plus,
-  ShoppingBag,
-  Briefcase,
-  Film,
-  Database,
-  Server,
-  ShoppingCart,
-} from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
 import { Link } from 'wouter';
 import type { Transaction } from '@shared/schema';
 import { useState } from 'react';
 import TransactionForm from '@/features/transactions/components/TransactionForm';
 import { transactionsListQuery } from '@/features/transactions/api';
+import {
+  iconOptions,
+  resolveTransactionIconValue,
+  type IconValue,
+} from '@/features/transactions/constants';
 
-// Map of transaction icons
-const transactionIcons: Record<string, JSX.Element> = {
-  'shopping-bag': <ShoppingBag className="h-4 w-4 text-muted-foreground" />,
-  briefcase: <Briefcase className="h-4 w-4 text-muted-foreground" />,
-  film: <Film className="h-4 w-4 text-muted-foreground" />,
-  database: <Database className="h-4 w-4 text-muted-foreground" />,
-  server: <Server className="h-4 w-4 text-muted-foreground" />,
-  'shopping-cart': <ShoppingCart className="h-4 w-4 text-muted-foreground" />,
-};
+const transactionIcons = iconOptions.reduce((acc, option) => {
+  acc[option.value] = <option.Icon className="h-4 w-4 text-muted-foreground" />;
+  return acc;
+}, {} as Record<IconValue, JSX.Element>);
 
 type TransactionItemProps = {
   transaction: Transaction;
@@ -54,6 +45,8 @@ function formatDate(date: Date | string) {
 }
 
 const TransactionItem = ({ transaction }: TransactionItemProps) => {
+  const iconKey = resolveTransactionIconValue(transaction);
+
   const formattedAmount = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -69,9 +62,7 @@ const TransactionItem = ({ transaction }: TransactionItemProps) => {
     <div className="flex items-center justify-between py-2">
       <div className="flex items-center">
         <div className="w-8 h-8 rounded-md bg-surfaceDark border border-border flex items-center justify-center mr-3">
-          {(transaction.icon && transactionIcons[transaction.icon]) || (
-            <div className="h-4 w-4 text-muted-foreground" />
-          )}
+          {transactionIcons[iconKey] || transactionIcons['shopping-bag']}
         </div>
         <div>
           <h3 className="font-medium"> {transaction.description} </h3>

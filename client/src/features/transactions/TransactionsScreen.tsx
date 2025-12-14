@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { transactionsListQuery } from './api';
-import { useFinance } from '@/lib/context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,7 +15,11 @@ import {
 import { Plus, Search, ArrowUpDown } from 'lucide-react';
 import TransactionForm from '@/features/transactions/components/TransactionForm';
 import type { Transaction } from '@shared/schema';
-import { iconOptions, type IconValue } from '@/features/transactions/constants';
+import {
+  iconOptions,
+  resolveTransactionIconValue,
+  type IconValue,
+} from '@/features/transactions/constants';
 
 const transactionIcons = iconOptions.reduce((acc, option) => {
   acc[option.value] = <option.Icon className="h-4 w-4 text-muted-foreground" />;
@@ -37,6 +40,8 @@ function formatDate(date: Date | string) {
 }
 
 const TransactionRow = ({ transaction, onEdit }: TransactionRowProps) => {
+  const iconKey = resolveTransactionIconValue(transaction);
+
   const formattedAmount = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -56,7 +61,7 @@ const TransactionRow = ({ transaction, onEdit }: TransactionRowProps) => {
       <td className="p-3">
         <div className="flex items-center">
           <div className="w-8 h-8 rounded-md bg-background border border-border flex items-center justify-center mr-3">
-            {transactionIcons[transaction.icon as IconValue] || transactionIcons['shopping-bag']}
+            {transactionIcons[iconKey] || transactionIcons['shopping-bag']}
           </div>
           <div>
             <div className="font-medium"> {transaction.description} </div>

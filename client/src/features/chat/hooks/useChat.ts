@@ -3,6 +3,10 @@ import { useFinance } from '@/lib/context';
 import { useToast } from '@/hooks/use-toast';
 import { sendChat } from '../api';
 import type { ChatMessage, ChatResponse } from '../types';
+import {
+  categoryToIcon,
+  type IconValue,
+} from '@/features/transactions/constants';
 
 export function useChat() {
   const { addTransaction } = useFinance();
@@ -37,13 +41,18 @@ export function useChat() {
 
   const processTransactions = async (transactions: any[]) => {
     for (const transaction of transactions) {
+      const derivedIcon =
+        (transaction.category && categoryToIcon[transaction.category]) ||
+        (transaction.icon as IconValue | undefined) ||
+        'shopping-bag';
+
       const formatted = {
         description: transaction.description,
         amount: transaction.amount.toString(),
         date: new Date(transaction.date),
         category: transaction.category || 'Uncategorized',
         type: transaction.type || 'expense',
-        icon: transaction.icon || 'shopping-bag',
+        icon: derivedIcon,
         accountId: 4,
       };
       await addTransaction(formatted as any);
