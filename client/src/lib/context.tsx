@@ -1,7 +1,25 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from './queryClient';
-import { apiRequest } from './queryClient';
+import { apiClient } from '@/services/apiClient';
+import {
+  accountKeys,
+  createAccount as createAccountApi,
+  deleteAccount as deleteAccountApi,
+  updateAccount as updateAccountApi,
+} from '@/features/accounts/api';
+import {
+  createTransaction as createTransactionApi,
+  deleteTransaction as deleteTransactionApi,
+  transactionKeys,
+  updateTransaction as updateTransactionApi,
+} from '@/features/transactions/api';
+import {
+  createGoal,
+  deleteGoal,
+  goalKeys,
+  updateGoal,
+} from '@/features/goals/api';
 import type { Account, Transaction, FinancialGoal } from '@shared/schema';
 
 type FinanceContextType = {
@@ -34,12 +52,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const fetchTotalBalance = async () => {
     try {
-      const res = await fetch('/api/balance', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch balance');
-      const data = await res.json();
+      const data = await apiClient<{ balance: number }>('/api/balance');
       setTotalBalance(data.balance);
     } catch (error) {
-      console.error('Error fetching balance:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch account balance',
@@ -51,13 +66,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const refreshData = async () => {
     setIsLoading(true);
     try {
-      // Invalidate all relevant queries to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
+      await queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      await queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      await queryClient.invalidateQueries({ queryKey: goalKeys.all });
       await fetchTotalBalance();
     } catch (error) {
-      console.error('Error refreshing data:', error);
       toast({
         title: 'Error',
         description: 'Failed to refresh data',
@@ -72,14 +85,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const addAccount = async (data: Omit<Account, 'id'>) => {
     setIsLoading(true);
     try {
-      await apiRequest('POST', '/api/accounts', data);
+      await createAccountApi(data);
       await refreshData();
       toast({
         title: 'Success',
         description: 'Account added successfully',
       });
     } catch (error) {
-      console.error('Error adding account:', error);
       toast({
         title: 'Error',
         description: 'Failed to add account',
@@ -93,14 +105,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const updateAccount = async (id: number, data: Partial<Omit<Account, 'id'>>) => {
     setIsLoading(true);
     try {
-      await apiRequest('PATCH', `/api/accounts/${id}`, data);
+      await updateAccountApi(id, data);
       await refreshData();
       toast({
         title: 'Success',
         description: 'Account updated successfully',
       });
     } catch (error) {
-      console.error('Error updating account:', error);
       toast({
         title: 'Error',
         description: 'Failed to update account',
@@ -114,14 +125,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const deleteAccount = async (id: number) => {
     setIsLoading(true);
     try {
-      await apiRequest('DELETE', `/api/accounts/${id}`);
+      await deleteAccountApi(id);
       await refreshData();
       toast({
         title: 'Success',
         description: 'Account deleted successfully',
       });
     } catch (error) {
-      console.error('Error deleting account:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete account',
@@ -136,13 +146,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const addTransaction = async (data: Omit<Transaction, 'id'>) => {
     setIsLoading(true);
     try {
-      console.log('Adding transaction to backend:', data); // Debug log
-      await apiRequest('POST', '/api/transactions', data);
-      console.log('Successfully added transaction, refreshing data...'); // Debug log
-
-      // Invalidate transactions query specifically
-      await queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
-      // Refresh total balance
+      await createTransactionApi(data);
+      await queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       await fetchTotalBalance();
 
       toast({
@@ -151,14 +156,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         duration: 3000,
       });
     } catch (error) {
-      console.error('Error adding transaction:', error);
       toast({
         title: 'Error',
         description: 'Failed to add transaction: ' + (error as Error).message,
         variant: 'destructive',
         duration: 5000,
       });
-      throw error; // Re-throw the error so it can be caught by the caller
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -167,14 +171,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const updateTransaction = async (id: number, data: Partial<Omit<Transaction, 'id'>>) => {
     setIsLoading(true);
     try {
-      await apiRequest('PATCH', `/api/transactions/${id}`, data);
+      await updateTransactionApi(id, data);
       await refreshData();
       toast({
         title: 'Success',
         description: 'Transaction updated successfully',
       });
     } catch (error) {
-      console.error('Error updating transaction:', error);
       toast({
         title: 'Error',
         description: 'Failed to update transaction',
@@ -188,14 +191,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const deleteTransaction = async (id: number) => {
     setIsLoading(true);
     try {
-      await apiRequest('DELETE', `/api/transactions/${id}`);
+      await deleteTransactionApi(id);
       await refreshData();
       toast({
         title: 'Success',
         description: 'Transaction deleted successfully',
       });
     } catch (error) {
-      console.error('Error deleting transaction:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete transaction',
@@ -210,14 +212,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const addFinancialGoal = async (data: Omit<FinancialGoal, 'id'>) => {
     setIsLoading(true);
     try {
-      await apiRequest('POST', '/api/goals', data);
+      await createGoal(data);
       await refreshData();
       toast({
         title: 'Success',
         description: 'Financial goal added successfully',
       });
     } catch (error) {
-      console.error('Error adding financial goal:', error);
       toast({
         title: 'Error',
         description: 'Failed to add financial goal',
@@ -231,14 +232,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const updateFinancialGoal = async (id: number, data: Partial<Omit<FinancialGoal, 'id'>>) => {
     setIsLoading(true);
     try {
-      await apiRequest('PATCH', `/api/goals/${id}`, data);
+      await updateGoal(id, data);
       await refreshData();
       toast({
         title: 'Success',
         description: 'Financial goal updated successfully',
       });
     } catch (error) {
-      console.error('Error updating financial goal:', error);
       toast({
         title: 'Error',
         description: 'Failed to update financial goal',
@@ -252,14 +252,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const deleteFinancialGoal = async (id: number) => {
     setIsLoading(true);
     try {
-      await apiRequest('DELETE', `/api/goals/${id}`);
+      await deleteGoal(id);
       await refreshData();
       toast({
         title: 'Success',
         description: 'Financial goal deleted successfully',
       });
     } catch (error) {
-      console.error('Error deleting financial goal:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete financial goal',
