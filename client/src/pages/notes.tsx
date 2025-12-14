@@ -29,7 +29,16 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Plus, Edit2, Trash2, FileText, Clock } from 'lucide-react';
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  FileText,
+  Clock,
+  Youtube,
+  ExternalLink,
+  Loader2
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Note schema
@@ -38,12 +47,28 @@ const noteSchema = z.object({
   content: z.string().min(1, 'Content is required'),
 });
 
+// YouTube URL schema
+const youtubeUrlSchema = z.object({
+  url: z.string()
+    .min(1, 'YouTube URL is required')
+    .refine(
+      (url) => url.includes('youtube.com/') || url.includes('youtu.be/'),
+      { message: 'Please enter a valid YouTube URL' }
+    ),
+});
+
 type Note = {
   id: string;
   title: string;
   content: string;
   createdAt: Date;
   updatedAt: Date;
+  // YouTube-specific fields
+  isYouTube?: boolean;
+  youtubeUrl?: string;
+  thumbnailUrl?: string;
+  tags?: string[];
+  publishDate?: string;
 };
 
 export default function Notes() {
@@ -67,8 +92,11 @@ export default function Notes() {
   ]);
 
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+  const [isYoutubeDialogOpen, setIsYoutubeDialogOpen] = useState(false);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isProcessingYoutube, setIsProcessingYoutube] = useState(false);
 
   const { toast } = useToast();
 
@@ -84,6 +112,16 @@ export default function Notes() {
     setCurrentNote(null);
     form.reset({ title: '', content: '' });
     setIsNoteDialogOpen(true);
+  };
+  
+  const handleAddYoutubeNote = () => {
+    youtubeForm.reset({ url: '' });
+    setIsYoutubeDialogOpen(true);
+  };
+  
+  const handleViewNote = (note: Note) => {
+    setCurrentNote(note);
+    setIsViewDialogOpen(true);
   };
 
   const handleEditNote = (note: Note) => {
@@ -137,6 +175,71 @@ export default function Notes() {
     }
     setIsNoteDialogOpen(false);
   };
+  
+  // YouTube form
+  const youtubeForm = useForm<z.infer<typeof youtubeUrlSchema>>({
+    resolver: zodResolver(youtubeUrlSchema),
+    defaultValues: {
+      url: '',
+    },
+  });
+  
+  // Process YouTube URL
+  const processYoutubeUrl = async (data: z.infer<typeof youtubeUrlSchema>) => {
+    try {
+      setIsProcessingYoutube(true);
+      
+      const response = await fetch('http://localhost:8000/api/youtube-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: data.url }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to process YouTube video');
+      }
+      
+      const result = await response.json();
+      
+      if (result.task_type === 'youtube_summary') {
+        // Create a new note with YouTube data
+        const videoData = result.data;
+        const newNote: Note = {
+          id: Date.now().toString(),
+          title: videoData.title,
+          content: videoData.summary,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isYouTube: true,
+          youtubeUrl: videoData.video_url,
+          thumbnailUrl: videoData.thumbnail_url,
+          tags: videoData.tags,
+          publishDate: videoData.publish_date,
+        };
+        
+        setNotes([newNote, ...notes]);
+        
+        toast({
+          title: 'YouTube summary created',
+          description: 'Your YouTube video has been summarized and saved as a note.',
+        });
+      }
+      
+      setIsYoutubeDialogOpen(false);
+    } catch (error) {
+      console.error('Error processing YouTube URL:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to process YouTube video',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingYoutube(false);
+    }
+  };
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -150,10 +253,16 @@ export default function Notes() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Financial Notes</h1>
-        <Button onClick={handleAddNote}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Note
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={handleAddYoutubeNote} variant="outline">
+            <Youtube className="mr-2 h-4 w-4" />
+            Add YouTube Summary
+          </Button>
+          <Button onClick={handleAddNote}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Note
+          </Button>
+        </div>
       </div>
 
       {notes.length === 0 ? (
@@ -173,23 +282,85 @@ export default function Notes() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {notes.map(note => (
-            <Card key={note.id} className="flex flex-col">
+            <Card 
+              key={note.id} 
+              className="flex flex-col cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleViewNote(note)}
+            >
               <CardHeader className="pb-2">
-                <CardTitle>{note.title}</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center">
+                    {note.isYouTube && <Youtube className="h-4 w-4 mr-2 text-red-500" />}
+                    {note.title}
+                  </CardTitle>
+                </div>
                 <CardDescription className="flex items-center">
                   <Clock className="h-3 w-3 mr-1" />
                   {formatDate(note.updatedAt)}
+                  {note.isYouTube && note.publishDate && (
+                    <span className="ml-2">• Published: {new Date(note.publishDate).toLocaleDateString()}</span>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
-                <p className="text-muted-foreground whitespace-pre-line">{note.content}</p>
+                {note.isYouTube && note.thumbnailUrl && (
+                  <div className="mb-3 relative">
+                    <img
+                      src={note.thumbnailUrl}
+                      alt={note.title}
+                      className="w-full h-auto rounded-md object-cover"
+                    />
+                  </div>
+                )}
+                <div className={note.isYouTube ? "max-h-40 overflow-y-auto" : ""}>
+                  {note.isYouTube && note.tags && note.tags.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-1">
+                      {note.tags.slice(0, 3).map((tag, index) => (
+                        <span key={index} className="bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                          {tag}
+                        </span>
+                      ))}
+                      {note.tags.length > 3 && (
+                        <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                          +{note.tags.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-white whitespace-pre-line line-clamp-4">{note.content}</p>
+                </div>
+                {note.isYouTube && note.youtubeUrl && (
+                  <a
+                    href={note.youtubeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-sm text-blue-500 hover:text-blue-700 mt-2"
+                    onClick={(e) => e.stopPropagation()} // Prevent card click when clicking the link
+                  >
+                    Watch on YouTube <ExternalLink className="h-3 w-3 ml-1" />
+                  </a>
+                )}
               </CardContent>
               <CardFooter className="border-t pt-4 flex justify-between">
-                <Button variant="outline" size="sm" onClick={() => handleEditNote(note)}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent card click when clicking the button
+                    handleEditNote(note);
+                  }}
+                >
                   <Edit2 className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDeleteNote(note)}>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent card click when clicking the button
+                    handleDeleteNote(note);
+                  }}
+                >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>
@@ -281,6 +452,144 @@ export default function Notes() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* YouTube URL Input Dialog */}
+      <Dialog open={isYoutubeDialogOpen} onOpenChange={setIsYoutubeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add YouTube Summary</DialogTitle>
+            <DialogDescription>
+              Enter a YouTube URL to generate a summary of the video content.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...youtubeForm}>
+            <form onSubmit={youtubeForm.handleSubmit(processYoutubeUrl)} className="space-y-4">
+              <FormField
+                control={youtubeForm.control}
+                name="url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>YouTube URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        {...field}
+                        disabled={isProcessingYoutube}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsYoutubeDialogOpen(false)}
+                  disabled={isProcessingYoutube}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isProcessingYoutube}
+                >
+                  {isProcessingYoutube ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Generate Summary'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Note Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
+          {currentNote && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center">
+                  {currentNote.isYouTube && <Youtube className="h-5 w-5 mr-2 text-red-500" />}
+                  <DialogTitle className="text-xl font-bold text-white">{currentNote.title}</DialogTitle>
+                </div>
+                <DialogDescription className="flex items-center mt-1 text-gray-300">
+                  <Clock className="h-3 w-3 mr-1 text-gray-300" />
+                  {formatDate(currentNote.updatedAt)}
+                  {currentNote.isYouTube && currentNote.publishDate && (
+                    <span className="ml-2 text-gray-300">• Published: {new Date(currentNote.publishDate).toLocaleDateString()}</span>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {currentNote.isYouTube && currentNote.thumbnailUrl && (
+                  <div className="relative">
+                    <img
+                      src={currentNote.thumbnailUrl}
+                      alt={currentNote.title}
+                      className="w-full h-auto rounded-md object-cover"
+                    />
+                  </div>
+                )}
+
+                {currentNote.isYouTube && currentNote.tags && currentNote.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {currentNote.tags.map((tag, index) => (
+                      <span key={index} className="bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="prose prose-lg max-w-none">
+                  <p className="whitespace-pre-line text-white font-medium leading-relaxed">{currentNote.content}</p>
+                </div>
+
+                {currentNote.isYouTube && currentNote.youtubeUrl && (
+                  <a
+                    href={currentNote.youtubeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-blue-400 hover:text-blue-300 font-medium"
+                  >
+                    Watch on YouTube <ExternalLink className="h-4 w-4 ml-1" />
+                  </a>
+                )}
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700">
+                  Close
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  setIsViewDialogOpen(false);
+                  handleEditNote(currentNote);
+                }} className="bg-blue-600 text-white border-blue-700 hover:bg-blue-700">
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button variant="destructive" onClick={() => {
+                  setIsViewDialogOpen(false);
+                  handleDeleteNote(currentNote);
+                }} className="bg-red-600 hover:bg-red-700">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -6,3 +6,5 @@ openai
 python-multipart
 google-genai
 Pillow
+youtube-transcript-api
+google-api-python-client

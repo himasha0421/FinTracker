@@ -1,13 +1,14 @@
 from fastapi import FastAPI, HTTPException, UploadFile, Form, File
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, HttpUrl
+from typing import List, Optional, Dict, Any
 import os
 from dotenv import load_dotenv
 import openai
 from PIL import Image
 import io
 from tools.statement_reader import read_statement
+from tools.youtube_processor import process_youtube_video
 import json
 
 # Load environment variables
@@ -36,6 +37,10 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
+
+
+class YouTubeRequest(BaseModel):
+    url: str
 
 
 async def process_image(file: UploadFile, message: str) -> str:
@@ -106,6 +111,57 @@ async def chat(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/youtube-summary")
+async def youtube_summary(request: YouTubeRequest):
+    """
+    Process a YouTube video URL to extract transcript and generate summary.
+
+    Args:
+        request (YouTubeRequest): Request containing YouTube URL
+
+    Returns:
+        Dict[str, Any]: Processing results including summary and metadata
+    """
+    try:
+        # Validate the URL (basic check)
+        if (
+            not request.url
+            or "youtube.com" not in request.url
+            and "youtu.be" not in request.url
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid YouTube URL. Please provide a valid YouTube video URL.",
+            )
+
+        # Process the YouTube video
+        result = process_youtube_video(request.url)
+
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+        # Return the processing results
+        return {
+            "response": "Successfully processed YouTube video",
+            "data": {
+                "title": result["metadata"]["title"],
+                "thumbnail_url": result["metadata"]["thumbnail_url"],
+                "video_url": result["metadata"]["video_url"],
+                "summary": result["summary"],
+                "tags": result["metadata"]["tags"],
+                "publish_date": result["metadata"]["publish_date"],
+            },
+            "task_type": "youtube_summary",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error processing YouTube video: {str(e)}"
+        )
 
 
 if __name__ == "__main__":
