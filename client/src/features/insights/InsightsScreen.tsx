@@ -288,7 +288,15 @@ export default function InsightsScreen() {
                   <BarChart data={monthlyData}>
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip
+                      cursor={false}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        borderColor: 'hsl(var(--border))',
+                        borderRadius: '0.5rem',
+                      }}
+                      wrapperStyle={{ outline: 'none' }}
+                    />
                     <Legend />
                     <Bar dataKey="income" fill="#22c55e" name="Income" />
                     <Bar dataKey="expense" fill="#ef4444" name="Expenses" />
