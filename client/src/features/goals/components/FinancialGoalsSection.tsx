@@ -6,9 +6,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Plus, Calendar, Shield, TrendingUp, CreditCard, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
-import type { FinancialGoal } from '@shared/schema';
 import GoalForm from '@/features/goals/components/GoalForm';
 import { goalsListQuery } from '@/features/goals/api';
+import type { GoalResponse } from '@/features/goals/api';
 
 // Map of goal icons
 const goalIcons: Record<string, JSX.Element> = {
@@ -38,19 +38,28 @@ const colorClasses: Record<string, string> = {
 };
 
 type GoalCardProps = {
-  goal: FinancialGoal;
-  onEdit: (goal: FinancialGoal) => void;
+  goal: GoalResponse;
+  onEdit: (goal: GoalResponse) => void;
 };
 
 const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
-  const progress = Math.round((Number(goal.currentAmount) / Number(goal.targetAmount)) * 100);
+  const targetAmountValue = Number(goal.targetAmount) || 0;
+  const linkedAccounts = goal.linkedAccounts ?? [];
+  const trackedAmount = linkedAccounts.length
+    ? linkedAccounts.reduce((sum, account) => sum + Number(account.balance), 0)
+    : Number(goal.currentAmount);
+  const progress =
+    targetAmountValue > 0 ? Math.min(100, Math.round((trackedAmount / targetAmountValue) * 100)) : 0;
 
-  const formattedTargetAmount = new Intl.NumberFormat('en-US', {
+  const currencyFormatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(Number(goal.targetAmount));
+  });
+
+  const formattedTargetAmount = currencyFormatter.format(targetAmountValue);
+  const formattedTrackedAmount = currencyFormatter.format(trackedAmount);
 
   const targetDate = new Date(goal.targetDate);
   const formattedTargetDate = format(targetDate, 'MMM yyyy');
@@ -79,7 +88,9 @@ const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
           </span>
         </div>
 
-        <p className="text-sm text-muted-foreground mb-4">{goal.description}</p>
+        <p className="text-sm text-muted-foreground mb-4">
+          {goal.description || 'No description provided.'}
+        </p>
 
         <div className="mb-3">
           <div className="flex justify-between text-sm mb-1">
@@ -89,11 +100,28 @@ const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
           <Progress value={progress} className="h-2" />
         </div>
 
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-sm text-muted-foreground">
+        <div className="space-y-2 mb-3 text-sm text-muted-foreground">
+          <div>
+            <span className="font-mono font-medium text-foreground">{formattedTrackedAmount}</span>{' '}
+            saved
+            {linkedAccounts.length > 0
+              ? ` across ${linkedAccounts.length} account${linkedAccounts.length === 1 ? '' : 's'}`
+              : ''}
+          </div>
+          <div>
             <span className="font-mono font-medium text-foreground">{formattedTargetAmount}</span>{' '}
             target
           </div>
+          {linkedAccounts.length > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Linked to{' '}
+              {linkedAccounts
+                .map(account => account.name)
+                .slice(0, 2)
+                .join(', ')}
+              {linkedAccounts.length > 2 ? '…' : ''}. Progress updates automatically.
+            </p>
+          ) : null}
         </div>
 
         <div className="flex items-center text-sm text-muted-foreground">
@@ -119,7 +147,7 @@ const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
 
 export default function FinancialGoals() {
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
+  const [editingGoal, setEditingGoal] = useState<GoalResponse | null>(null);
 
   const { data: goals, isLoading } = useQuery(goalsListQuery());
 
@@ -128,7 +156,7 @@ export default function FinancialGoals() {
     setIsGoalFormOpen(true);
   };
 
-  const handleEditGoal = (goal: FinancialGoal) => {
+  const handleEditGoal = (goal: GoalResponse) => {
     setEditingGoal(goal);
     setIsGoalFormOpen(true);
   };
@@ -174,9 +202,7 @@ export default function FinancialGoals() {
               </Card>
             ))
           ) : goals && goals.length > 0 ? (
-            goals.map((goal: FinancialGoal) => (
-              <GoalCard key={goal.id} goal={goal} onEdit={handleEditGoal} />
-            ))
+            goals.map(goal => <GoalCard key={goal.id} goal={goal} onEdit={handleEditGoal} />)
           ) : (
             <div className="col-span-full py-10 text-center text-muted-foreground">
               No financial goals found. Click "Add Goal" to create your first financial goal.

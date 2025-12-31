@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { useForm } from 'react-hook-form';
+import { useForm, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -14,22 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useFinance } from '@/lib/context';
@@ -43,13 +25,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { FinancialGoal } from '@shared/schema';
+import type { GoalResponse } from '@/features/goals/api';
+import { accountsListQuery } from '@/features/accounts/api';
+import { BasicGoalDetails } from './BasicGoalDetails';
+import { GoalAmountFields } from './GoalAmountFields';
+import { LinkedAccountsField } from './LinkedAccountsField';
+import { TargetDateField } from './TargetDateField';
+import { StatusField } from './StatusField';
+import { IconColorFields } from './IconColorFields';
 
 // Form schema for financial goals
 // Define types for goal status, icon, and color
-type GoalStatus = 'in-progress' | 'completed' | 'pending';
-type GoalIcon = 'shield' | 'trending-up' | 'credit-card';
-type GoalColor = 'blue' | 'green' | 'yellow' | 'purple' | 'red';
+const statusOptions = ['in-progress', 'completed', 'pending'] as const;
+const iconOptions = ['shield', 'trending-up', 'credit-card'] as const;
+const colorOptions = ['blue', 'green', 'yellow', 'purple', 'red'] as const;
 
 const goalFormSchema = z.object({
   name: z.string().min(1, 'Goal name is required'),
@@ -63,35 +52,22 @@ const goalFormSchema = z.object({
   targetDate: z
     .string()
     .refine(val => !isNaN(Date.parse(val)), { message: 'Target date must be a valid date' }),
-  status: z.enum(['in-progress', 'completed', 'pending']),
-  icon: z.enum(['shield', 'trending-up', 'credit-card']),
-  color: z.enum(['blue', 'green', 'yellow', 'purple', 'red']),
+  status: z.enum(statusOptions),
+  icon: z.enum(iconOptions),
+  color: z.enum(colorOptions),
+  linkedAccountIds: z.array(z.string()).default([]),
 });
 
-const statusOptions = [
-  { value: 'in-progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'pending', label: 'Pending' },
-];
-
-const iconOptions = [
-  { value: 'shield', label: 'Emergency' },
-  { value: 'trending-up', label: 'Investment' },
-  { value: 'credit-card', label: 'Debt' },
-];
-
-const colorOptions = [
-  { value: 'blue', label: 'Blue' },
-  { value: 'green', label: 'Green' },
-  { value: 'yellow', label: 'Yellow' },
-  { value: 'purple', label: 'Purple' },
-  { value: 'red', label: 'Red' },
-];
+export type GoalStatus = (typeof statusOptions)[number];
+export type GoalIcon = (typeof iconOptions)[number];
+export type GoalColor = (typeof colorOptions)[number];
+export type GoalFormValues = z.infer<typeof goalFormSchema>;
+export type GoalFormControl = Control<GoalFormValues>;
 
 type GoalFormProps = {
   isOpen: boolean;
   onClose: () => void;
-  goal: FinancialGoal | null;
+  goal: GoalResponse | null;
 };
 
 export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
@@ -119,24 +95,33 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
       targetAmount: goal?.targetAmount ? goal.targetAmount.toString() : '',
       currentAmount: goal?.currentAmount ? goal.currentAmount.toString() : '0',
       targetDate: goal ? formatDateForInput(goal.targetDate) : getFutureDate(),
-      status:
-        goal?.status === 'in-progress' || goal?.status === 'completed' || goal?.status === 'pending'
-          ? (goal.status as GoalStatus)
-          : 'in-progress',
-      icon:
-        goal?.icon === 'shield' || goal?.icon === 'trending-up' || goal?.icon === 'credit-card'
-          ? (goal.icon as GoalIcon)
-          : 'shield',
-      color:
-        goal?.color === 'blue' ||
-        goal?.color === 'green' ||
-        goal?.color === 'yellow' ||
-        goal?.color === 'purple' ||
-        goal?.color === 'red'
-          ? (goal.color as GoalColor)
-          : 'blue',
+      status: statusOptions.includes(goal?.status as GoalStatus)
+        ? (goal?.status as GoalStatus)
+        : 'in-progress',
+      icon: iconOptions.includes(goal?.icon as GoalIcon) ? (goal?.icon as GoalIcon) : 'shield',
+      color: colorOptions.includes(goal?.color as GoalColor) ? (goal?.color as GoalColor) : 'blue',
+      linkedAccountIds: goal?.linkedAccounts
+        ? goal.linkedAccounts.map(account => account.id.toString())
+        : [],
     },
   });
+
+  const { data: accounts, isLoading: isLoadingAccounts } = useQuery(accountsListQuery());
+  const linkedAccountIds = form.watch('linkedAccountIds') || [];
+  const linkedAccounts =
+    accounts?.filter(account => linkedAccountIds.includes(String(account.id))) ?? [];
+  const linkedAccountsTotal = linkedAccounts.reduce(
+    (sum, account) => sum + Number(account.balance),
+    0
+  );
+
+  const formatCurrency = (value: string | number) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(value || 0));
 
   // Reset form when goal changes
   useEffect(() => {
@@ -147,34 +132,37 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
         targetAmount: goal?.targetAmount ? goal.targetAmount.toString() : '',
         currentAmount: goal?.currentAmount ? goal.currentAmount.toString() : '0',
         targetDate: goal ? formatDateForInput(goal.targetDate) : getFutureDate(),
-        status:
-          goal?.status === 'in-progress' ||
-          goal?.status === 'completed' ||
-          goal?.status === 'pending'
-            ? (goal.status as GoalStatus)
-            : 'in-progress',
-        icon:
-          goal?.icon === 'shield' || goal?.icon === 'trending-up' || goal?.icon === 'credit-card'
-            ? (goal.icon as GoalIcon)
-            : 'shield',
-        color:
-          goal?.color === 'blue' ||
-          goal?.color === 'green' ||
-          goal?.color === 'yellow' ||
-          goal?.color === 'purple' ||
-          goal?.color === 'red'
-            ? (goal.color as GoalColor)
-            : 'blue',
+        status: statusOptions.includes(goal?.status as GoalStatus)
+          ? (goal?.status as GoalStatus)
+          : 'in-progress',
+        icon: iconOptions.includes(goal?.icon as GoalIcon) ? (goal?.icon as GoalIcon) : 'shield',
+        color: colorOptions.includes(goal?.color as GoalColor) ? (goal?.color as GoalColor) : 'blue',
+        linkedAccountIds: goal?.linkedAccounts
+          ? goal.linkedAccounts.map(account => account.id.toString())
+          : [],
       });
     }
   }, [form, goal, isOpen]);
 
+  useEffect(() => {
+    if (linkedAccounts.length > 0) {
+      form.setValue('currentAmount', linkedAccountsTotal.toFixed(2));
+    }
+  }, [linkedAccounts, linkedAccountsTotal, form]);
+
   const onSubmit = async (data: z.infer<typeof goalFormSchema>) => {
     // Convert empty string description to null to match the schema
+    const numericLinkedAccountIds = (data.linkedAccountIds || [])
+      .map(id => Number(id))
+      .filter(id => !Number.isNaN(id));
+
     const formattedData = {
       ...data,
+      currentAmount:
+        linkedAccounts.length > 0 ? linkedAccountsTotal.toFixed(2) : data.currentAmount,
       targetDate: new Date(data.targetDate),
       description: data.description || null,
+      linkedAccountIds: numericLinkedAccountIds,
     };
 
     if (goal) {
@@ -203,205 +191,29 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
+              <BasicGoalDetails control={form.control} />
+
+              <GoalAmountFields
                 control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Goal Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter goal name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                linkedAccounts={linkedAccounts}
+                linkedAccountsTotal={linkedAccountsTotal}
+                formatCurrency={formatCurrency}
               />
 
-              <FormField
+              <LinkedAccountsField
                 control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter description"
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        disabled={field.disabled}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                accounts={accounts}
+                linkedAccounts={linkedAccounts}
+                linkedAccountsTotal={linkedAccountsTotal}
+                isLoadingAccounts={isLoadingAccounts}
+                formatCurrency={formatCurrency}
               />
 
-              <div className="flex gap-4">
-                <FormField
-                  control={form.control}
-                  name="targetAmount"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Target Amount</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TargetDateField control={form.control} />
 
-                <FormField
-                  control={form.control}
-                  name="currentAmount"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Current Amount</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <StatusField control={form.control} />
 
-              <FormField
-                control={form.control}
-                name="targetDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Target Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(new Date(field.value), 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={date => {
-                            if (date) {
-                              const formattedDate = format(date, 'yyyy-MM-dd');
-                              field.onChange(formattedDate);
-                            }
-                          }}
-                          disabled={date => date < new Date() || date > new Date('2100-01-01')}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {statusOptions.map(status => (
-                          <SelectItem key={status.value} value={status.value}>
-                            {status.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex gap-4">
-                <FormField
-                  control={form.control}
-                  name="icon"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Icon</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select icon" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {iconOptions.map(icon => (
-                            <SelectItem key={icon.value} value={icon.value}>
-                              {icon.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="color"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Color</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select color" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {colorOptions.map(color => (
-                            <SelectItem key={color.value} value={color.value}>
-                              {color.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <IconColorFields control={form.control} />
 
               <DialogFooter className="gap-2 sm:gap-0">
                 {goal && (
