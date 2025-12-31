@@ -5,6 +5,7 @@ import { sendChat } from '../api';
 import type { ChatMessage, ChatResponse } from '../types';
 import {
   categoryToIcon,
+  assigneeOptions,
   type IconValue,
 } from '@/features/transactions/constants';
 
@@ -54,6 +55,16 @@ export function useChat() {
         type: transaction.type || 'expense',
         icon: derivedIcon,
         accountId: 4,
+        assignments: [
+          {
+            assignee:
+              transaction.assignee &&
+              assigneeOptions.some(option => option.value === transaction.assignee)
+                ? transaction.assignee
+                : 'Hima',
+            sharePercent: '100',
+          },
+        ],
       };
       await addTransaction(formatted as any);
     }

@@ -14,13 +14,10 @@ import {
   transactionKeys,
   updateTransaction as updateTransactionApi,
 } from '@/features/transactions/api';
-import {
-  createGoal,
-  deleteGoal,
-  goalKeys,
-  updateGoal,
-} from '@/features/goals/api';
-import type { Account, Transaction, FinancialGoal } from '@shared/schema';
+import { createGoal, deleteGoal, goalKeys, updateGoal } from '@/features/goals/api';
+import type { GoalPayload, UpdateGoalPayload } from '@/features/goals/api';
+import type { Account } from '@shared/schema';
+import type { CreateTransactionPayload, UpdateTransactionPayload } from '@/features/transactions/types';
 
 type FinanceContextType = {
   isLoading: boolean;
@@ -30,11 +27,11 @@ type FinanceContextType = {
   addAccount: (data: Omit<Account, 'id'>) => Promise<void>;
   updateAccount: (id: number, data: Partial<Omit<Account, 'id'>>) => Promise<void>;
   deleteAccount: (id: number) => Promise<void>;
-  addTransaction: (data: Omit<Transaction, 'id'>) => Promise<void>;
-  updateTransaction: (id: number, data: Partial<Omit<Transaction, 'id'>>) => Promise<void>;
+  addTransaction: (data: CreateTransactionPayload) => Promise<void>;
+  updateTransaction: (id: number, data: UpdateTransactionPayload) => Promise<void>;
   deleteTransaction: (id: number) => Promise<void>;
-  addFinancialGoal: (data: Omit<FinancialGoal, 'id'>) => Promise<void>;
-  updateFinancialGoal: (id: number, data: Partial<Omit<FinancialGoal, 'id'>>) => Promise<void>;
+  addFinancialGoal: (data: GoalPayload) => Promise<void>;
+  updateFinancialGoal: (id: number, data: UpdateGoalPayload) => Promise<void>;
   deleteFinancialGoal: (id: number) => Promise<void>;
 };
 
@@ -143,7 +140,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   // Transaction operations
-  const addTransaction = async (data: Omit<Transaction, 'id'>) => {
+  const addTransaction = async (data: CreateTransactionPayload) => {
     setIsLoading(true);
     try {
       await createTransactionApi(data);
@@ -168,7 +165,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateTransaction = async (id: number, data: Partial<Omit<Transaction, 'id'>>) => {
+  const updateTransaction = async (id: number, data: UpdateTransactionPayload) => {
     setIsLoading(true);
     try {
       await updateTransactionApi(id, data);
@@ -209,7 +206,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   // Financial Goal operations
-  const addFinancialGoal = async (data: Omit<FinancialGoal, 'id'>) => {
+  const addFinancialGoal = async (data: GoalPayload) => {
     setIsLoading(true);
     try {
       await createGoal(data);
@@ -229,7 +226,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateFinancialGoal = async (id: number, data: Partial<Omit<FinancialGoal, 'id'>>) => {
+  const updateFinancialGoal = async (id: number, data: UpdateGoalPayload) => {
     setIsLoading(true);
     try {
       await updateGoal(id, data);

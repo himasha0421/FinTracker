@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Pencil, Plus } from 'lucide-react';
+import { ChevronDown, Pencil, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import AccountForm from '@/features/accounts/components/AccountForm';
 import type { Account } from '@shared/schema';
@@ -78,18 +78,22 @@ type AccountItemProps = {
   onEdit: (account: Account) => void;
 };
 
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 const AccountItem = ({ account, onEdit }: AccountItemProps) => {
   const iconKey = account.icon ?? 'wallet';
   const colorKey = account.color ?? 'green';
-  const formattedBalance = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number(account.balance));
+  const numericBalance = Number(account.balance);
+  const displayBalance = account.type === 'credit' ? -numericBalance : numericBalance;
+  const formattedBalance = currencyFormatter.format(displayBalance);
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-border group">
+    <div className="flex items-center justify-between py-3 px-4 border-b border-border group">
       <div className="flex items-center">
         <div
           className={`w-8 h-8 rounded-md ${colorClasses[colorKey] ?? colorClasses.green} flex items-center justify-center mr-3`}
@@ -119,8 +123,47 @@ const AccountItem = ({ account, onEdit }: AccountItemProps) => {
 export default function AccountsCard() {
   const [isAccountFormOpen, setIsAccountFormOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const { data: accounts, isLoading } = useQuery(accountsListQuery());
+
+  const groupedAccounts = useMemo(() => {
+    if (!accounts?.length) return [];
+    const groups: Record<
+      string,
+      {
+        accounts: Account[];
+        totalBalance: number;
+      }
+    > = {};
+
+    accounts.forEach((account) => {
+      const groupKey = account.type || 'other';
+      const numericBalance = Number(account.balance);
+      const signedBalance = account.type === 'credit' ? -numericBalance : numericBalance;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          accounts: [],
+          totalBalance: 0,
+        };
+      }
+
+      groups[groupKey].accounts.push(account);
+      groups[groupKey].totalBalance += signedBalance;
+    });
+
+    return Object.entries(groups)
+      .map(([type, data]) => ({ type, ...data }))
+      .sort((a, b) => a.type.localeCompare(b.type));
+  }, [accounts]);
+
+  const toggleGroup = (group: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [group]: !prev[group],
+    }));
+  };
 
   const handleAddAccount = () => {
     setEditingAccount(null);
@@ -165,14 +208,48 @@ export default function AccountsCard() {
                   <Skeleton className="h-4 w-16" />
                 </div>
               ))
-            ) : accounts && accounts.length > 0 ? (
-              accounts.map((account: Account) => (
-                <AccountItem
-                  key={account.id}
-                  account={account}
-                  onEdit={() => handleEditAccount(account)}
-                />
-              ))
+            ) : groupedAccounts.length > 0 ? (
+              groupedAccounts.map(({ type, accounts: grouped, totalBalance }) => {
+                const isExpanded = expandedGroups[type] ?? false;
+                const groupLabel = `${type.charAt(0).toUpperCase()}${type.slice(1)} Accounts`;
+                return (
+                  <div key={type} className="border border-border rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(type)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-accent/40 transition-colors"
+                    >
+                      <div>
+                        <p className="font-semibold">{groupLabel}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {grouped.length} {grouped.length === 1 ? 'account' : 'accounts'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono font-medium">
+                          {currencyFormatter.format(totalBalance)}
+                        </span>
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </div>
+                    </button>
+                    {isExpanded && (
+                      <div className="bg-card divide-y divide-border">
+                        {grouped.map((account) => (
+                          <AccountItem
+                            key={account.id}
+                            account={account}
+                            onEdit={() => handleEditAccount(account)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <div className="py-3 text-center text-muted-foreground">
                 No accounts found. Add an account to get started.
