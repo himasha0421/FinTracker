@@ -76,3 +76,11 @@ export function resolveTransactionIconValue(transaction: {
   if (hasValidSavedIcon) return savedIcon as IconValue;
   return 'shopping-bag';
 }
+
+export const assigneeOptions = [
+  { value: 'None', label: 'None' },
+  { value: 'Hima', label: 'Hima' },
+  { value: 'Thami', label: 'Thami' },
+] as const;
+
+export type AssigneeValue = (typeof assigneeOptions)[number]['value'];

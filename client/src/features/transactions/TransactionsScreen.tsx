@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 import { useQuery } from '@tanstack/react-query';
 import { transactionsListQuery } from './api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -12,23 +16,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, ArrowUpDown, CalendarIcon } from 'lucide-react';
 import TransactionForm from '@/features/transactions/components/TransactionForm';
-import type { Transaction } from '@shared/schema';
+import type { TransactionWithAssignments } from '@/features/transactions/types';
 import {
   iconOptions,
   resolveTransactionIconValue,
   type IconValue,
 } from '@/features/transactions/constants';
+import { cn } from '@/lib/utils';
 
 const transactionIcons = iconOptions.reduce((acc, option) => {
   acc[option.value] = <option.Icon className="h-4 w-4 text-muted-foreground" />;
   return acc;
 }, {} as Record<IconValue, JSX.Element>);
 
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 type TransactionRowProps = {
-  transaction: Transaction;
-  onEdit: (transaction: Transaction) => void;
+  transaction: TransactionWithAssignments;
+  onEdit: (transaction: TransactionWithAssignments) => void;
 };
 
 function formatDate(date: Date | string) {
@@ -39,15 +51,16 @@ function formatDate(date: Date | string) {
   });
 }
 
+const normalizeDateValue = (date: Date | string) => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized.getTime();
+};
+
 const TransactionRow = ({ transaction, onEdit }: TransactionRowProps) => {
   const iconKey = resolveTransactionIconValue(transaction);
 
-  const formattedAmount = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number(transaction.amount));
+  const formattedAmount = currencyFormatter.format(Number(transaction.amount));
 
   const isIncome = transaction.type === 'income';
   const amountClass = isIncome ? 'text-positive' : 'text-negative';
@@ -73,6 +86,27 @@ const TransactionRow = ({ transaction, onEdit }: TransactionRowProps) => {
         </div>
       </td>
       <td className="p-3 text-muted-foreground"> {formatDate(transaction.date)} </td>
+      <td className="p-3 text-muted-foreground">
+        <div className="space-y-1">
+          {transaction.assignments && transaction.assignments.length > 0 ? (
+            transaction.assignments.map(assignment => {
+              const sharePercent = Number(assignment.sharePercent) || 0;
+              const shareAmount =
+                (Number(transaction.amount) * sharePercent) / 100;
+              return (
+                <div key={`${assignment.id}-${assignment.assignee}`} className="flex items-center justify-between text-xs">
+                  <span>{assignment.assignee}</span>
+                  <span className="font-mono">
+                    {sharePercent.toFixed(2)}% ({currencyFormatter.format(shareAmount)})
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <span className="text-xs text-muted-foreground">Unassigned</span>
+          )}
+        </div>
+      </td>
       <td className="p-3 text-right">
         <span className={`font-medium ${amountClass} font-mono`}>
           {isIncome ? formattedPrefix : ''}
@@ -85,10 +119,11 @@ const TransactionRow = ({ transaction, onEdit }: TransactionRowProps) => {
 
 export default function TransactionsScreen() {
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<TransactionWithAssignments | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const { data: transactions, isLoading } = useQuery({
     ...transactionsListQuery(),
@@ -110,17 +145,38 @@ export default function TransactionsScreen() {
   const filteredTransactions =
     transactions && Array.isArray(transactions)
       ? transactions
-          .filter((transaction: Transaction) => {
+          .filter((transaction: TransactionWithAssignments) => {
+            const searchValue = searchTerm.toLowerCase();
             const matchesSearch =
               transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (transaction.category &&
-                transaction.category.toLowerCase().includes(searchTerm.toLowerCase()));
+                transaction.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+              transaction.assignments.some(assignment =>
+                assignment.assignee.toLowerCase().includes(searchValue)
+              );
 
             const matchesType = filterType === 'all' || transaction.type === filterType;
+            const matchesDateRange = (() => {
+              if (!dateRange?.from && !dateRange?.to) {
+                return true;
+              }
 
-            return matchesSearch && matchesType;
+              const transactionTime = normalizeDateValue(transaction.date);
+              const fromTime = dateRange?.from ? normalizeDateValue(dateRange.from) : undefined;
+              const toTime = dateRange?.to
+                ? normalizeDateValue(dateRange.to)
+                : fromTime;
+
+              if (fromTime && toTime) {
+                return transactionTime >= fromTime && transactionTime <= toTime;
+              }
+
+              return true;
+            })();
+
+            return matchesSearch && matchesType && matchesDateRange;
           })
-          .sort((a: Transaction, b: Transaction) => {
+          .sort((a: TransactionWithAssignments, b: TransactionWithAssignments) => {
             const dateA = new Date(a.date).getTime();
             const dateB = new Date(b.date).getTime();
 
@@ -155,7 +211,53 @@ export default function TransactionsScreen() {
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 justify-end">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-[240px] justify-start text-left font-normal',
+                        !dateRange?.from && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          `${format(dateRange.from, 'LLL dd, y')} - ${format(
+                            dateRange.to,
+                            'LLL dd, y'
+                          )}`
+                        ) : (
+                          format(dateRange.from, 'LLL dd, y')
+                        )
+                      ) : (
+                        'Filter by date'
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="range"
+                      numberOfMonths={2}
+                      selected={dateRange}
+                      onSelect={range => setDateRange(range)}
+                      defaultMonth={dateRange?.from}
+                      initialFocus
+                    />
+                    {dateRange?.from && (
+                      <div className="flex items-center justify-between border-t border-border px-3 py-2">
+                        <span className="text-xs text-muted-foreground">
+                          {dateRange.to ? 'Date range selected' : 'Single date selected'}
+                        </span>
+                        <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)}>
+                          Clear
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+
                 <Select value={filterType} onValueChange={setFilterType}>
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Filter by type" />
@@ -184,6 +286,7 @@ export default function TransactionsScreen() {
                   <tr className="border-b border-border">
                     <th className="p-3 text-left font-medium"> Description </th>
                     <th className="p-3 text-left font-medium"> Date </th>
+                    <th className="p-3 text-left font-medium"> Split </th>
                     <th className="p-3 text-right font-medium"> Amount </th>
                   </tr>
                 </thead>
@@ -204,6 +307,12 @@ export default function TransactionsScreen() {
                           {' '}
                           <Skeleton className="h-4 w-24" />{' '}
                         </td>
+                        <td className="p-3 text-muted-foreground">
+                          <div className="space-y-2">
+                            <Skeleton className="h-3 w-28" />
+                            <Skeleton className="h-3 w-24" />
+                          </div>
+                        </td>
                         <td className="p-3 text-right">
                           {' '}
                           <Skeleton className="h-4 w-16 ml-auto" />{' '}
@@ -211,7 +320,7 @@ export default function TransactionsScreen() {
                       </tr>
                     ))
                   ) : filteredTransactions && filteredTransactions.length > 0 ? (
-                    filteredTransactions.map((transaction: Transaction) => (
+                    filteredTransactions.map((transaction: TransactionWithAssignments) => (
                       <TransactionRow
                         key={transaction.id}
                         transaction={transaction}
@@ -220,8 +329,8 @@ export default function TransactionsScreen() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={3} className="p-6 text-center text-muted-foreground">
-                        {searchTerm || filterType !== 'all'
+                      <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                        {searchTerm || filterType !== 'all' || dateRange?.from
                           ? 'No transactions match your filters.'
                           : 'No transactions found. Add a transaction to get started.'}
                       </td>

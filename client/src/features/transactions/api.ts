@@ -1,6 +1,10 @@
 import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '@/services/apiClient';
-import type { Transaction } from '@shared/schema';
+import type {
+  TransactionWithAssignments,
+  CreateTransactionPayload,
+  UpdateTransactionPayload,
+} from '@/features/transactions/types';
 
 export const transactionKeys = {
   all: ['transactions'] as const,
@@ -10,32 +14,32 @@ export const transactionKeys = {
 };
 
 export function transactionsListQuery(limit?: number) {
-  return queryOptions<Transaction[]>({
+  return queryOptions<TransactionWithAssignments[]>({
     queryKey: transactionKeys.list(limit),
-    queryFn: () => apiClient<Transaction[]>('/api/transactions', { query: { limit } }),
+    queryFn: () => apiClient<TransactionWithAssignments[]>('/api/transactions', { query: { limit } }),
   });
 }
 
 export function transactionsByAccountQuery(accountId: number) {
-  return queryOptions<Transaction[]>({
+  return queryOptions<TransactionWithAssignments[]>({
     queryKey: transactionKeys.byAccount(accountId),
-    queryFn: () => apiClient<Transaction[]>(`/api/accounts/${accountId}/transactions`),
+    queryFn: () => apiClient<TransactionWithAssignments[]>(`/api/accounts/${accountId}/transactions`),
   });
 }
 
 export function transactionDetailQuery(id: number) {
-  return queryOptions<Transaction>({
+  return queryOptions<TransactionWithAssignments>({
     queryKey: transactionKeys.detail(id),
-    queryFn: () => apiClient<Transaction>(`/api/transactions/${id}`),
+    queryFn: () => apiClient<TransactionWithAssignments>(`/api/transactions/${id}`),
   });
 }
 
-export function createTransaction(data: Omit<Transaction, 'id'>) {
-  return apiClient<Transaction>('/api/transactions', { method: 'POST', data });
+export function createTransaction(data: CreateTransactionPayload) {
+  return apiClient<TransactionWithAssignments>('/api/transactions', { method: 'POST', data });
 }
 
-export function updateTransaction(id: number, data: Partial<Omit<Transaction, 'id'>>) {
-  return apiClient<Transaction>(`/api/transactions/${id}`, { method: 'PATCH', data });
+export function updateTransaction(id: number, data: UpdateTransactionPayload) {
+  return apiClient<TransactionWithAssignments>(`/api/transactions/${id}`, { method: 'PATCH', data });
 }
 
 export function deleteTransaction(id: number) {

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight, Plus } from 'lucide-react';
 import { Link } from 'wouter';
-import type { Transaction } from '@shared/schema';
+import type { TransactionWithAssignments } from '@/features/transactions/types';
 import { useState } from 'react';
 import TransactionForm from '@/features/transactions/components/TransactionForm';
 import { transactionsListQuery } from '@/features/transactions/api';
@@ -20,7 +20,7 @@ const transactionIcons = iconOptions.reduce((acc, option) => {
 }, {} as Record<IconValue, JSX.Element>);
 
 type TransactionItemProps = {
-  transaction: Transaction;
+  transaction: TransactionWithAssignments;
 };
 
 function formatDate(date: Date | string) {
@@ -46,6 +46,15 @@ function formatDate(date: Date | string) {
 
 const TransactionItem = ({ transaction }: TransactionItemProps) => {
   const iconKey = resolveTransactionIconValue(transaction);
+  const splitSummary =
+    transaction.assignments && transaction.assignments.length > 0
+      ? transaction.assignments
+          .map(assignment => {
+            const percent = Number(assignment.sharePercent) || 0;
+            return `${assignment.assignee} ${percent.toFixed(0)}%`;
+          })
+          .join(' • ')
+      : 'Unassigned';
 
   const formattedAmount = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -66,7 +75,9 @@ const TransactionItem = ({ transaction }: TransactionItemProps) => {
         </div>
         <div>
           <h3 className="font-medium"> {transaction.description} </h3>
-          <p className="text-xs text-muted-foreground"> {formatDate(transaction.date)} </p>
+          <p className="text-xs text-muted-foreground">
+            {formatDate(transaction.date)} · {splitSummary}
+          </p>
         </div>
       </div>
       <div className="text-right">
@@ -124,7 +135,7 @@ export default function TransactionsCard() {
                 </div>
               ))
             ) : transactions && transactions.length > 0 ? (
-              transactions.map((transaction: Transaction) => (
+              transactions.map((transaction: TransactionWithAssignments) => (
                 <TransactionItem key={transaction.id} transaction={transaction} />
               ))
             ) : (

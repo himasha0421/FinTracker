@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -25,26 +25,31 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Loader2, Trash2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Trash2, Plus, Minus } from 'lucide-react';
 import { useFinance } from '@/lib/context';
 import { useQuery } from '@tanstack/react-query';
-import type { Transaction, Account } from '@shared/schema';
+import type { Account } from '@shared/schema';
+import type { TransactionWithAssignments, CreateTransactionPayload } from '@/features/transactions/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { accountsListQuery } from '@/features/accounts/api';
 import {
+  assigneeOptions,
   categoryOptions,
   categoryToIcon,
   iconOptions,
+  type AssigneeValue,
   type IconValue,
 } from '@/features/transactions/constants';
 
 const iconValues = iconOptions.map(option => option.value) as [IconValue, ...IconValue[]];
+const assigneeValues = assigneeOptions.map(option => option.value) as [
+  AssigneeValue,
+  ...AssigneeValue[],
+];
 
-const resolveInitialIcon = (
-  transaction: Transaction | null | undefined
-): IconValue => {
+const resolveInitialIcon = (transaction: TransactionWithAssignments | null | undefined): IconValue => {
   if (!transaction) return 'shopping-bag';
 
   const mapped = transaction.category ? categoryToIcon[transaction.category] : undefined;
@@ -59,6 +64,14 @@ const resolveInitialIcon = (
 };
 
 // Form schema for transactions
+const assignmentSchema = z.object({
+  assignee: z.enum(assigneeValues),
+  sharePercent: z
+    .number({ required_error: 'Share percentage is required' })
+    .min(0, 'Share must be at least 0%')
+    .max(100, 'Share cannot exceed 100%'),
+});
+
 const transactionFormSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   amount: z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, {
@@ -73,6 +86,18 @@ const transactionFormSchema = z.object({
   date: z.string().refine(val => !isNaN(Date.parse(val)), {
     message: 'Please enter a valid date',
   }),
+  assignments: z
+    .array(assignmentSchema)
+    .nonempty('At least one assignee is required')
+    .superRefine((assignments, ctx) => {
+      const total = assignments.reduce((sum, assignment) => sum + assignment.sharePercent, 0);
+      if (Math.abs(total - 100) > 0.01) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Assignment percentages must total 100%',
+        });
+      }
+    }),
 });
 
 const transactionTypes = [
@@ -83,7 +108,7 @@ const transactionTypes = [
 type TransactionFormProps = {
   isOpen: boolean;
   onClose: () => void;
-  transaction?: Transaction | null;
+  transaction?: TransactionWithAssignments | null;
 };
 
 export default function TransactionForm({
@@ -122,6 +147,18 @@ export default function TransactionForm({
           type: transaction.type as 'income' | 'expense',
           icon: resolveInitialIcon(transaction),
           date: formatDateForInput(transaction.date),
+          assignments:
+            transaction.assignments && transaction.assignments.length > 0
+              ? transaction.assignments.map(assignment => ({
+                  assignee: (assignment.assignee as AssigneeValue) || 'Hima',
+                  sharePercent: Number(assignment.sharePercent),
+                }))
+              : [
+                  {
+                    assignee: 'Hima' as AssigneeValue,
+                    sharePercent: 100,
+                  },
+                ],
         }
       : {
           description: '',
@@ -131,8 +168,28 @@ export default function TransactionForm({
           icon: 'shopping-bag' as IconValue,
           category: '',
           accountId: accounts.length > 0 ? accounts[0].id.toString() : '',
+          assignments: [
+            {
+              assignee: 'Hima' as AssigneeValue,
+              sharePercent: 100,
+            },
+          ],
         },
   });
+  const { fields: assignmentFields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'assignments',
+  });
+
+  const assignmentValues = form.watch('assignments') ?? [];
+  const totalAssigned = assignmentValues.reduce(
+    (sum, assignment) => sum + (Number(assignment.sharePercent) || 0),
+    0
+  );
+  const assignmentsError =
+    !Array.isArray(form.formState.errors.assignments) && form.formState.errors.assignments
+      ? form.formState.errors.assignments.message
+      : undefined;
 
   const onSubmit = async (data: z.infer<typeof transactionFormSchema>) => {
     // Make sure the date string is in YYYY-MM-DD format for consistent server-side parsing
@@ -141,7 +198,7 @@ export default function TransactionForm({
       : formatDateForInput(new Date());
 
     // Prepare the data with proper type handling
-    const formattedData = {
+    const formattedData: CreateTransactionPayload = {
       description: data.description,
       amount: data.amount.toString(),
       accountId: Number(data.accountId),
@@ -149,13 +206,17 @@ export default function TransactionForm({
       category: data.category || undefined,
       type: data.type,
       icon: (data.category && categoryToIcon[data.category]) || data.icon || 'shopping-bag',
+      assignments: data.assignments.map(assignment => ({
+        assignee: assignment.assignee,
+        sharePercent: assignment.sharePercent.toString(),
+      })),
     };
 
     try {
       if (transaction) {
-        await updateTransaction(transaction.id, formattedData as any);
+        await updateTransaction(transaction.id, formattedData);
       } else {
-        await addTransaction(formattedData as any);
+        await addTransaction(formattedData);
       }
       onClose();
     } catch (error) {
@@ -322,6 +383,97 @@ export default function TransactionForm({
                 </FormItem>
               )}
             />
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <FormLabel>Split Between</FormLabel>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    append({
+                      assignee: 'Hima' as AssigneeValue,
+                      sharePercent: Math.max(0, 100 - totalAssigned),
+                    })
+                  }
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Split
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {assignmentFields.map((assignmentField, index) => (
+                  <div key={assignmentField.id} className="flex items-end gap-3">
+                    <FormField
+                      control={form.control}
+                      name={`assignments.${index}.assignee`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>Assignee</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select assignee" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {assigneeOptions.map(option => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`assignments.${index}.sharePercent`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Percent</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              value={field.value ?? 0}
+                              onChange={event =>
+                                field.onChange(
+                                  event.target.value === '' ? 0 : Number(event.target.value)
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    {assignmentFields.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="mb-1"
+                        onClick={() => remove(index)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <div className="text-sm text-muted-foreground">
+                  Total assigned: {totalAssigned.toFixed(2)}%
+                </div>
+                {assignmentsError && (
+                  <p className="text-sm text-destructive">{assignmentsError}</p>
+                )}
+              </div>
+            </div>
 
             <div className="flex gap-4">
               <FormField
