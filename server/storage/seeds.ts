@@ -1,4 +1,9 @@
-import type { InsertAccount, InsertFinancialGoal, InsertTransaction } from '@shared/schema';
+import type {
+  InsertAccount,
+  InsertFinancialGoal,
+  InsertTransaction,
+  TransactionAssignmentInput,
+} from '@shared/schema';
 import type { IStorage } from './types';
 
 const accountSeeds: InsertAccount[] = [
@@ -44,64 +49,96 @@ const accountSeeds: InsertAccount[] = [
   },
 ];
 
-function buildTransactionSeeds(now: Date, accountIds: Record<string, number>): InsertTransaction[] {
+type TransactionSeed = {
+  transaction: InsertTransaction;
+  assignments: TransactionAssignmentInput[];
+};
+
+function buildTransactionSeeds(now: Date, accountIds: Record<string, number>): TransactionSeed[] {
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
 
   return [
     {
-      description: 'Salary Deposit',
-      amount: '4500.00',
-      date: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0),
-      accountId: accountIds['Main Savings'],
-      category: 'Income',
-      type: 'income',
-      icon: 'briefcase',
+      transaction: {
+        description: 'Salary Deposit',
+        amount: '4500.00',
+        date: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0),
+        accountId: accountIds['Main Savings'],
+        category: 'Income',
+        type: 'income',
+        icon: 'briefcase',
+      },
+      assignments: [{ assignee: 'Hima', sharePercent: '100' }],
     },
     {
-      description: 'Apple Store Purchase',
-      amount: '999.00',
-      date: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 14, 45, 0),
-      accountId: accountIds['Checking Account'],
-      category: 'Electronics',
-      type: 'expense',
-      icon: 'shopping-bag',
+      transaction: {
+        description: 'Apple Store Purchase',
+        amount: '999.00',
+        date: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 14, 45, 0),
+        accountId: accountIds['Checking Account'],
+        category: 'Electronics',
+        type: 'expense',
+        icon: 'shopping-bag',
+      },
+      assignments: [
+        { assignee: 'Hima', sharePercent: '50' },
+        { assignee: 'Thami', sharePercent: '50' },
+      ],
     },
     {
-      description: 'Netflix Subscription',
-      amount: '15.99',
-      date: yesterday,
-      accountId: accountIds['Checking Account'],
-      category: 'Entertainment',
-      type: 'expense',
-      icon: 'film',
+      transaction: {
+        description: 'Netflix Subscription',
+        amount: '15.99',
+        date: yesterday,
+        accountId: accountIds['Checking Account'],
+        category: 'Entertainment',
+        type: 'expense',
+        icon: 'film',
+      },
+      assignments: [{ assignee: 'Hima', sharePercent: '100' }],
     },
     {
-      description: 'Superbase Subscription',
-      amount: '12.99',
-      date: yesterday,
-      accountId: accountIds['Checking Account'],
-      category: 'Software',
-      type: 'expense',
-      icon: 'database',
+      transaction: {
+        description: 'Superbase Subscription',
+        amount: '12.99',
+        date: yesterday,
+        accountId: accountIds['Checking Account'],
+        category: 'Software',
+        type: 'expense',
+        icon: 'database',
+      },
+      assignments: [
+        { assignee: 'Thami', sharePercent: '60' },
+        { assignee: 'Hima', sharePercent: '40' },
+      ],
     },
     {
-      description: 'Vercel Subscription',
-      amount: '15.99',
-      date: yesterday,
-      accountId: accountIds['Checking Account'],
-      category: 'Software',
-      type: 'expense',
-      icon: 'server',
+      transaction: {
+        description: 'Vercel Subscription',
+        amount: '15.99',
+        date: yesterday,
+        accountId: accountIds['Checking Account'],
+        category: 'Software',
+        type: 'expense',
+        icon: 'server',
+      },
+      assignments: [{ assignee: 'Thami', sharePercent: '100' }],
     },
     {
-      description: 'Groceries',
-      amount: '250.00',
-      date: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 17, 30, 0),
-      accountId: accountIds['Checking Account'],
-      category: 'Food',
-      type: 'expense',
-      icon: 'shopping-cart',
+      transaction: {
+        description: 'Groceries',
+        amount: '250.00',
+        date: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 17, 30, 0),
+        accountId: accountIds['Checking Account'],
+        category: 'Food',
+        type: 'expense',
+        icon: 'shopping-cart',
+      },
+      assignments: [
+        { assignee: 'Hima', sharePercent: '50' },
+        { assignee: 'Thami', sharePercent: '50' },
+      ],
     },
   ];
 }
@@ -162,8 +199,8 @@ export async function seedStorage(storage: IStorage, now = new Date()) {
   }
 
   const transactions = buildTransactionSeeds(now, accountIdMap);
-  for (const transaction of transactions) {
-    await storage.createTransaction(transaction);
+  for (const { transaction, assignments } of transactions) {
+    await storage.createTransaction(transaction, assignments);
   }
 
   const goals = buildGoalSeeds(now);

@@ -3,10 +3,14 @@ import {
   InsertAccount,
   Transaction,
   InsertTransaction,
+  InsertTransactionAssignment,
+  TransactionAssignment,
+  TransactionWithAssignments,
   FinancialGoal,
   InsertFinancialGoal,
   User,
   InsertUser,
+  TransactionAssignmentInput,
 } from '@shared/schema';
 
 export interface IStorage {
@@ -21,22 +25,32 @@ export interface IStorage {
   deleteAccount(id: number): Promise<boolean>;
   getTotalBalance(): Promise<number>;
 
-  getTransactions(limit?: number): Promise<Transaction[]>;
-  getTransaction(id: number): Promise<Transaction | undefined>;
-  getTransactionsByAccount(accountId: number): Promise<Transaction[]>;
-  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  getTransactions(limit?: number): Promise<TransactionWithAssignments[]>;
+  getTransaction(id: number): Promise<TransactionWithAssignments | undefined>;
+  getTransactionsByAccount(accountId: number): Promise<TransactionWithAssignments[]>;
+  createTransaction(
+    transaction: InsertTransaction,
+    assignments: TransactionAssignmentInput[]
+  ): Promise<TransactionWithAssignments>;
   updateTransaction(
     id: number,
-    transaction: Partial<InsertTransaction>
-  ): Promise<Transaction | undefined>;
+    transaction: Partial<InsertTransaction>,
+    assignments?: TransactionAssignmentInput[]
+  ): Promise<TransactionWithAssignments | undefined>;
   deleteTransaction(id: number): Promise<boolean>;
+  getTransactionAssignments(transactionId: number): Promise<TransactionAssignment[]>;
+  setTransactionAssignments(
+    transactionId: number,
+    assignments: InsertTransactionAssignment[]
+  ): Promise<TransactionAssignment[]>;
 
   getFinancialGoals(): Promise<FinancialGoal[]>;
   getFinancialGoal(id: number): Promise<FinancialGoal | undefined>;
-  createFinancialGoal(goal: InsertFinancialGoal): Promise<FinancialGoal>;
+  createFinancialGoal(goal: InsertFinancialGoal, linkedAccountIds?: number[]): Promise<FinancialGoal>;
   updateFinancialGoal(
     id: number,
-    goal: Partial<InsertFinancialGoal>
+    goal: Partial<InsertFinancialGoal>,
+    linkedAccountIds?: number[]
   ): Promise<FinancialGoal | undefined>;
   deleteFinancialGoal(id: number): Promise<boolean>;
 }

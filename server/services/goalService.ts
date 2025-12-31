@@ -3,6 +3,14 @@ import type { IStorage } from '../storage';
 
 function normalizeGoalPayload(payload: any) {
   const data = { ...payload };
+  let linkedAccountIds: number[] | undefined;
+  if (Array.isArray(data.linkedAccountIds)) {
+    linkedAccountIds = data.linkedAccountIds
+      .map((value: any) => Number(value))
+      .filter(value => !Number.isNaN(value));
+  }
+  delete data.linkedAccountIds;
+
   if (data.targetDate && typeof data.targetDate === 'string') {
     const [year, month, day] = data.targetDate.split('-').map(Number);
     if (year && month && day) {
@@ -11,7 +19,7 @@ function normalizeGoalPayload(payload: any) {
       data.targetDate = new Date(data.targetDate);
     }
   }
-  return data;
+  return { data, linkedAccountIds };
 }
 
 export class GoalService {
@@ -26,13 +34,15 @@ export class GoalService {
   }
 
   createGoal(payload: unknown) {
-    const data = insertFinancialGoalSchema.parse(normalizeGoalPayload(payload));
-    return this.storage.createFinancialGoal(data);
+    const { data, linkedAccountIds } = normalizeGoalPayload(payload);
+    const parsed = insertFinancialGoalSchema.parse(data);
+    return this.storage.createFinancialGoal(parsed, linkedAccountIds);
   }
 
   updateGoal(id: number, payload: unknown) {
-    const data = insertFinancialGoalSchema.partial().parse(normalizeGoalPayload(payload));
-    return this.storage.updateFinancialGoal(id, data);
+    const { data, linkedAccountIds } = normalizeGoalPayload(payload);
+    const parsed = insertFinancialGoalSchema.partial().parse(data);
+    return this.storage.updateFinancialGoal(id, parsed, linkedAccountIds);
   }
 
   deleteGoal(id: number) {

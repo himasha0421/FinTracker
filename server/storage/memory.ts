@@ -3,6 +3,10 @@ import {
   InsertAccount,
   Transaction,
   InsertTransaction,
+  TransactionAssignment,
+  TransactionAssignmentInput,
+  InsertTransactionAssignment,
+  TransactionWithAssignments,
   FinancialGoal,
   InsertFinancialGoal,
   User,
@@ -14,7 +18,9 @@ export class MemoryStorage implements IStorage {
   private users: Map<number, User>;
   private accounts: Map<number, Account>;
   private transactions: Map<number, Transaction>;
+  private transactionAssignments: Map<number, TransactionAssignment[]>;
   private financialGoals: Map<number, FinancialGoal>;
+  private goalAccounts: Map<number, Set<number>>;
 
   private userCurrentId: number;
   private accountCurrentId: number;
@@ -25,7 +31,9 @@ export class MemoryStorage implements IStorage {
     this.users = new Map();
     this.accounts = new Map();
     this.transactions = new Map();
+    this.transactionAssignments = new Map();
     this.financialGoals = new Map();
+    this.goalAccounts = new Map();
 
     this.userCurrentId = 1;
     this.accountCurrentId = 1;
@@ -96,28 +104,46 @@ export class MemoryStorage implements IStorage {
     }, 0);
   }
 
-  async getTransactions(limit?: number): Promise<Transaction[]> {
+  async getTransactions(limit?: number): Promise<TransactionWithAssignments[]> {
     const transactions = Array.from(this.transactions.values()).sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
     if (limit) {
-      return transactions.slice(0, limit);
+      return transactions.slice(0, limit).map(transaction => ({
+        ...transaction,
+        assignments: this.transactionAssignments.get(transaction.id) ?? [],
+      }));
     }
-    return transactions;
+    return transactions.map(transaction => ({
+      ...transaction,
+      assignments: this.transactionAssignments.get(transaction.id) ?? [],
+    }));
   }
 
-  async getTransaction(id: number): Promise<Transaction | undefined> {
-    return this.transactions.get(id);
+  async getTransaction(id: number): Promise<TransactionWithAssignments | undefined> {
+    const transaction = this.transactions.get(id);
+    if (!transaction) return undefined;
+    return {
+      ...transaction,
+      assignments: this.transactionAssignments.get(id) ?? [],
+    };
   }
 
-  async getTransactionsByAccount(accountId: number): Promise<Transaction[]> {
+  async getTransactionsByAccount(accountId: number): Promise<TransactionWithAssignments[]> {
     return Array.from(this.transactions.values())
       .filter(transaction => transaction.accountId === accountId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .map(transaction => ({
+        ...transaction,
+        assignments: this.transactionAssignments.get(transaction.id) ?? [],
+      }));
   }
 
-  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+  async createTransaction(
+    insertTransaction: InsertTransaction,
+    assignments: TransactionAssignmentInput[]
+  ): Promise<TransactionWithAssignments> {
     const id = this.transactionCurrentId++;
     const transaction: Transaction = {
       ...insertTransaction,
@@ -127,6 +153,13 @@ export class MemoryStorage implements IStorage {
       icon: insertTransaction.icon || 'credit-card',
     };
     this.transactions.set(id, transaction);
+    const assignmentRecords: TransactionAssignment[] = assignments.map((assignment, index) => ({
+      id: index + 1,
+      transactionId: id,
+      assignee: assignment.assignee,
+      sharePercent: assignment.sharePercent,
+    }));
+    this.transactionAssignments.set(id, assignmentRecords);
 
     const account = await this.getAccount(transaction.accountId);
     if (account) {
@@ -138,13 +171,17 @@ export class MemoryStorage implements IStorage {
       });
     }
 
-    return transaction;
+    return {
+      ...transaction,
+      assignments: assignmentRecords,
+    };
   }
 
   async updateTransaction(
     id: number,
-    transactionData: Partial<InsertTransaction>
-  ): Promise<Transaction | undefined> {
+    transactionData: Partial<InsertTransaction>,
+    assignments?: TransactionAssignmentInput[]
+  ): Promise<TransactionWithAssignments | undefined> {
     const transaction = this.transactions.get(id);
     if (!transaction) return undefined;
 
@@ -172,7 +209,22 @@ export class MemoryStorage implements IStorage {
 
     const updatedTransaction = { ...transaction, ...transactionData };
     this.transactions.set(id, updatedTransaction);
-    return updatedTransaction;
+
+    let assignmentRecords = this.transactionAssignments.get(id) ?? [];
+    if (assignments !== undefined) {
+      assignmentRecords = assignments.map((assignment, index) => ({
+        id: index + 1,
+        transactionId: id,
+        assignee: assignment.assignee,
+        sharePercent: assignment.sharePercent,
+      }));
+      this.transactionAssignments.set(id, assignmentRecords);
+    }
+
+    return {
+      ...updatedTransaction,
+      assignments: assignmentRecords,
+    };
   }
 
   async deleteTransaction(id: number): Promise<boolean> {
@@ -189,18 +241,44 @@ export class MemoryStorage implements IStorage {
       });
     }
 
+    this.transactionAssignments.delete(id);
     return this.transactions.delete(id);
   }
 
+  async getTransactionAssignments(transactionId: number): Promise<TransactionAssignment[]> {
+    return this.transactionAssignments.get(transactionId) ?? [];
+  }
+
+  async setTransactionAssignments(
+    transactionId: number,
+    assignments: InsertTransactionAssignment[]
+  ): Promise<TransactionAssignment[]> {
+    const assignmentRecords = assignments.map((assignment, index) => ({
+      id: index + 1,
+      transactionId,
+      assignee: assignment.assignee,
+      sharePercent: assignment.sharePercent,
+    }));
+    this.transactionAssignments.set(transactionId, assignmentRecords);
+    return assignmentRecords;
+  }
+
   async getFinancialGoals(): Promise<FinancialGoal[]> {
-    return Array.from(this.financialGoals.values());
+    const goals = Array.from(this.financialGoals.values());
+    return this.hydrateGoalsWithAccounts(goals);
   }
 
   async getFinancialGoal(id: number): Promise<FinancialGoal | undefined> {
-    return this.financialGoals.get(id);
+    const goal = this.financialGoals.get(id);
+    if (!goal) return undefined;
+    const [hydrated] = await this.hydrateGoalsWithAccounts([goal]);
+    return hydrated;
   }
 
-  async createFinancialGoal(insertGoal: InsertFinancialGoal): Promise<FinancialGoal> {
+  async createFinancialGoal(
+    insertGoal: InsertFinancialGoal,
+    linkedAccountIds: number[] = []
+  ): Promise<FinancialGoal> {
     const id = this.goalCurrentId++;
     const goal: FinancialGoal = {
       ...insertGoal,
@@ -212,12 +290,17 @@ export class MemoryStorage implements IStorage {
       color: insertGoal.color || 'blue',
     };
     this.financialGoals.set(id, goal);
-    return goal;
+    if (linkedAccountIds.length) {
+      this.goalAccounts.set(id, new Set(linkedAccountIds));
+    }
+    const [hydrated] = await this.hydrateGoalsWithAccounts([goal]);
+    return hydrated;
   }
 
   async updateFinancialGoal(
     id: number,
-    goalData: Partial<InsertFinancialGoal>
+    goalData: Partial<InsertFinancialGoal>,
+    linkedAccountIds?: number[]
   ): Promise<FinancialGoal | undefined> {
     const goal = this.financialGoals.get(id);
     if (!goal) return undefined;
@@ -225,21 +308,54 @@ export class MemoryStorage implements IStorage {
     const updatedGoal = { ...goal, ...goalData };
 
     if (goalData.currentAmount !== undefined && goalData.status === undefined) {
-      const progress = Number(updatedGoal.currentAmount) / Number(updatedGoal.targetAmount);
-      if (progress >= 1) {
-        updatedGoal.status = 'completed';
-      } else if (progress > 0) {
-        updatedGoal.status = 'in-progress';
-      } else {
-        updatedGoal.status = 'pending';
-      }
+      updatedGoal.status = this.deriveGoalStatus(
+        String(updatedGoal.currentAmount),
+        String(updatedGoal.targetAmount)
+      );
     }
 
     this.financialGoals.set(id, updatedGoal);
-    return updatedGoal;
+    if (linkedAccountIds !== undefined) {
+      if (linkedAccountIds.length) {
+        this.goalAccounts.set(id, new Set(linkedAccountIds));
+      } else {
+        this.goalAccounts.delete(id);
+      }
+    }
+    const [hydrated] = await this.hydrateGoalsWithAccounts([updatedGoal]);
+    return hydrated;
   }
 
   async deleteFinancialGoal(id: number): Promise<boolean> {
+    this.goalAccounts.delete(id);
     return this.financialGoals.delete(id);
+  }
+
+  private deriveGoalStatus(currentAmount: string, targetAmount: string) {
+    const target = Number(targetAmount);
+    if (target <= 0) return 'pending';
+    const current = Number(currentAmount);
+    const progress = current / target;
+    if (progress >= 1) return 'completed';
+    if (progress > 0) return 'in-progress';
+    return 'pending';
+  }
+
+  private async hydrateGoalsWithAccounts(goals: FinancialGoal[]): Promise<FinancialGoal[]> {
+    return goals.map(goal => {
+      const linkedAccountIds = Array.from(this.goalAccounts.get(goal.id) ?? []);
+      if (!linkedAccountIds.length) return goal;
+      const linkedAccounts = linkedAccountIds
+        .map(accountId => this.accounts.get(accountId))
+        .filter((account): account is Account => Boolean(account));
+      if (!linkedAccounts.length) return goal;
+      const total = linkedAccounts.reduce((sum, account) => sum + Number(account.balance), 0);
+      return {
+        ...goal,
+        currentAmount: total.toFixed(2),
+        linkedAccounts,
+        status: this.deriveGoalStatus(String(total), String(goal.targetAmount)),
+      };
+    });
   }
 }
