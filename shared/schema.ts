@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, decimal, timestamp, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, serial, integer, decimal, timestamp } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -29,9 +29,27 @@ export const transactions = pgTable('transactions', {
   icon: text('icon').default('credit-card'), // Default icon name
 });
 
+export const transactionAssignments = pgTable('transaction_assignments', {
+  id: serial('id').primaryKey(),
+  transactionId: integer('transaction_id')
+    .references(() => transactions.id, { onDelete: 'cascade' })
+    .notNull(),
+  assignee: text('assignee').notNull(),
+  sharePercent: decimal('share_percent', { precision: 5, scale: 2 }).notNull(),
+});
+
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true });
+export const insertTransactionAssignmentSchema = createInsertSchema(transactionAssignments).omit({
+  id: true,
+});
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type InsertTransactionAssignment = z.infer<typeof insertTransactionAssignmentSchema>;
 export type Transaction = typeof transactions.$inferSelect;
+export type TransactionAssignment = typeof transactionAssignments.$inferSelect;
+export type TransactionAssignmentInput = Omit<InsertTransactionAssignment, 'transactionId'>;
+export type TransactionWithAssignments = Transaction & {
+  assignments: TransactionAssignment[];
+};
 
 // Financial Goal table
 export const financialGoals = pgTable('financial_goals', {
@@ -49,6 +67,22 @@ export const financialGoals = pgTable('financial_goals', {
 export const insertFinancialGoalSchema = createInsertSchema(financialGoals).omit({ id: true });
 export type InsertFinancialGoal = z.infer<typeof insertFinancialGoalSchema>;
 export type FinancialGoal = typeof financialGoals.$inferSelect;
+
+export const financialGoalAccounts = pgTable('financial_goal_accounts', {
+  id: serial('id').primaryKey(),
+  goalId: integer('goal_id')
+    .references(() => financialGoals.id, { onDelete: 'cascade' })
+    .notNull(),
+  accountId: integer('account_id')
+    .references(() => accounts.id, { onDelete: 'cascade' })
+    .notNull(),
+});
+
+export const insertFinancialGoalAccountSchema = createInsertSchema(financialGoalAccounts).omit({
+  id: true,
+});
+export type InsertFinancialGoalAccount = z.infer<typeof insertFinancialGoalAccountSchema>;
+export type FinancialGoalAccount = typeof financialGoalAccounts.$inferSelect;
 
 // User table
 export const users = pgTable('users', {
