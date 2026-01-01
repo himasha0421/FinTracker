@@ -3,6 +3,7 @@ import BalanceSummary from '@/features/dashboard/components/BalanceSummary';
 import AccountsCard from '@/features/accounts/components/AccountsCard';
 import TransactionsCard from '@/features/transactions/components/TransactionsCard';
 import FinancialGoals from '@/features/goals/components/FinancialGoalsSection';
+import CategoryBudgetPlannerCard from '@/features/budgets/components/CategoryBudgetPlannerCard';
 import { useFinance } from '@/lib/context';
 
 export default function DashboardScreen() {
@@ -22,6 +23,10 @@ export default function DashboardScreen() {
       </div>
 
       <FinancialGoals />
+
+      <div className="mt-6">
+        <CategoryBudgetPlannerCard />
+      </div>
     </div>
   );
 }

@@ -3,12 +3,16 @@ import type { DateRange } from 'react-day-picker';
 import type { TransactionWithAssignments } from '@/features/transactions/types';
 
 type WeeklySegment = { start: Date; end: Date; label: string };
+type MonthlySegment = { start: Date; end: Date; label: string };
 
 type UseInsightsDataResult = {
   summaryData: { income: number; expense: number; savings: number };
   weeklyData: Record<string, any>[];
   weeklyCategories: string[];
   getTransactionsForWeek: (index: number) => TransactionWithAssignments[];
+  monthlyData: Record<string, any>[];
+  monthlyCategories: string[];
+  monthlyTotalsByCategory: Record<string, number>;
   assigneeDistributionData: { name: string; value: number }[];
   categoriesByAssignee: Record<string, { name: string; value: number }[]>;
   assigneeCategoryTransactions: Record<
@@ -60,6 +64,27 @@ const buildWeeklySegments = (range: { from: Date; to: Date }): WeeklySegment[] =
   return segments;
 };
 
+const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'short' });
+const monthYearFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' });
+
+const buildMonthlySegments = (range: { from: Date; to: Date }): MonthlySegment[] => {
+  const segments: MonthlySegment[] = [];
+  const start = new Date(range.from.getFullYear(), range.from.getMonth(), 1);
+  let cursor = start;
+  const includeYear = range.from.getFullYear() !== range.to.getFullYear();
+
+  while (cursor <= range.to) {
+    const segmentStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const segmentEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+    if (segmentEnd > range.to) segmentEnd.setTime(range.to.getTime());
+    const label = includeYear ? monthYearFormatter.format(segmentStart) : monthFormatter.format(segmentStart);
+    segments.push({ start: segmentStart, end: segmentEnd, label });
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  }
+
+  return segments;
+};
+
 export function useInsightsData(
   transactions: TransactionWithAssignments[] | undefined,
   dateRange: DateRange | undefined
@@ -90,12 +115,18 @@ export function useInsightsData(
     );
   }, [dateFilteredTransactions]);
 
+  const expenseCategories = useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    dateFilteredTransactions.forEach(transaction => {
+      if (transaction.type === 'expense' && transaction.category) {
+        uniqueCategories.add(transaction.category);
+      }
+    });
+    return Array.from(uniqueCategories);
+  }, [dateFilteredTransactions]);
+
   const weeklyComputation = useMemo(() => {
     const segments = buildWeeklySegments(normalizedRange);
-    const uniqueCategories = new Set<string>();
-    dateFilteredTransactions.forEach(t => {
-      if (t.type === 'expense' && t.category) uniqueCategories.add(t.category);
-    });
 
     const weeklyData = segments.map(segment => {
       const weekTransactions = dateFilteredTransactions.filter(t => {
@@ -103,7 +134,7 @@ export function useInsightsData(
         return date >= segment.start && date <= segment.end;
       });
       const entry: Record<string, any> = { week: segment.label, _hasTransactions: weekTransactions.length > 0 };
-      uniqueCategories.forEach(category => {
+      expenseCategories.forEach(category => {
         entry[category] = 0;
       });
       weekTransactions.forEach(t => {
@@ -114,8 +145,39 @@ export function useInsightsData(
       return entry;
     });
 
-    return { weeklyData, weeklySegments: segments, categories: Array.from(uniqueCategories) };
-  }, [dateFilteredTransactions, normalizedRange]);
+    return { weeklyData, weeklySegments: segments, categories: expenseCategories };
+  }, [dateFilteredTransactions, normalizedRange, expenseCategories]);
+
+  const monthlyComputation = useMemo(() => {
+    const segments = buildMonthlySegments(normalizedRange);
+    const monthlyData = segments.map(segment => {
+      const monthTransactions = dateFilteredTransactions.filter(t => {
+        const date = new Date(t.date);
+        return date >= segment.start && date <= segment.end;
+      });
+      const entry: Record<string, any> = { month: segment.label, _hasTransactions: monthTransactions.length > 0 };
+      expenseCategories.forEach(category => {
+        entry[category] = 0;
+      });
+      monthTransactions.forEach(t => {
+        if (t.type === 'expense' && t.category) {
+          entry[t.category] = (entry[t.category] || 0) + Number(t.amount);
+        }
+      });
+      return entry;
+    });
+    return { monthlyData, monthlySegments: segments, categories: expenseCategories };
+  }, [dateFilteredTransactions, normalizedRange, expenseCategories]);
+
+  const monthlyTotalsByCategory = useMemo(() => {
+    const totals: Record<string, number> = {};
+    monthlyComputation.monthlyData.forEach(monthEntry => {
+      expenseCategories.forEach(category => {
+        totals[category] = (totals[category] || 0) + Number(monthEntry[category] || 0);
+      });
+    });
+    return totals;
+  }, [monthlyComputation.monthlyData, expenseCategories]);
 
   const getTransactionsForWeek = useCallback(
     (index: number) => {
@@ -201,6 +263,9 @@ export function useInsightsData(
     weeklyData: weeklyComputation.weeklyData,
     weeklyCategories: weeklyComputation.categories,
     getTransactionsForWeek,
+    monthlyData: monthlyComputation.monthlyData,
+    monthlyCategories: monthlyComputation.categories,
+    monthlyTotalsByCategory,
     assigneeDistributionData: assigneeBreakdown.totalsArray,
     categoriesByAssignee: assigneeBreakdown.categoriesByAssignee,
     assigneeCategoryTransactions: assigneeBreakdown.transactionsByAssignee,

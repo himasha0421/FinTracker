@@ -6,7 +6,9 @@ import DateRangeSelector from '@/features/insights/components/DateRangeSelector'
 import SummaryCard from '@/features/insights/components/SummaryCard';
 import WeeklySpendCard from '@/features/insights/components/WeeklySpendCard';
 import AssigneeDistributionCard from '@/features/insights/components/AssigneeDistributionCard';
+import MonthlyCategorySpendCard from '@/features/insights/components/MonthlyCategorySpendCard';
 import { useInsightsData } from '@/features/insights/hooks/useInsightsData';
+import { useCategoryBudgets } from '@/features/budgets/hooks/useCategoryBudgets';
 
 export default function InsightsScreen() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
@@ -28,11 +30,16 @@ export default function InsightsScreen() {
     weeklyData,
     weeklyCategories,
     getTransactionsForWeek,
+    monthlyData,
+    monthlyCategories,
+    monthlyTotalsByCategory,
     assigneeDistributionData,
     categoriesByAssignee,
     assigneeCategoryTransactions,
     totalAssigneeExpenses,
   } = useInsightsData(transactions, dateRange);
+
+  const { budgetMap } = useCategoryBudgets(monthlyCategories);
 
   return (
     <div className="space-y-6">
@@ -62,6 +69,14 @@ export default function InsightsScreen() {
         categoriesByAssignee={categoriesByAssignee}
         categoryTransactions={assigneeCategoryTransactions}
         total={totalAssigneeExpenses}
+      />
+
+      <MonthlyCategorySpendCard
+        monthlyData={monthlyData}
+        categories={monthlyCategories}
+        isLoading={isLoading}
+        budgetMap={budgetMap}
+        monthlyTotalsByCategory={monthlyTotalsByCategory}
       />
     </div>
   );
