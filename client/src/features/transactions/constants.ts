@@ -43,10 +43,16 @@ export const categoryOptions = [
   { value: 'Friends & Gatherings', label: 'Friends & Gatherings' },
 ] as const;
 
+export const expenseCategoryOptions = categoryOptions.filter(
+  option => option.value !== 'Income' && option.value !== 'Salary'
+);
+
 export const categoryToIcon: Record<string, IconValue> = {
   Income: 'briefcase',
+  Salary: 'briefcase',
   'Salary/Work': 'briefcase',
   Savings: 'piggy-bank',
+  Bills: 'credit-card',
   'Bills & Utilities': 'credit-card',
   Housing: 'home',
   Transport: 'car',
@@ -56,6 +62,17 @@ export const categoryToIcon: Record<string, IconValue> = {
   Shopping: 'shopping-bag',
   'Health & Wellness': 'heart-pulse',
   'Friends & Gatherings': 'users',
+};
+
+const categoryValueMap = new Map<string, string>(
+  categoryOptions.map(option => [option.label, option.value])
+);
+
+export const normalizeCategoryValue = (category?: string | null) => {
+  if (!category) return '';
+  const trimmed = category.trim();
+  if (!trimmed) return '';
+  return categoryValueMap.get(trimmed) ?? trimmed;
 };
 
 const iconValueSet = new Set<IconValue>(iconOptions.map(option => option.value));

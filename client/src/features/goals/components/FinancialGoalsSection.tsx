@@ -209,6 +209,7 @@ export default function FinancialGoals() {
             </div>
           )}
         </div>
+
       </div>
 
       <GoalForm isOpen={isGoalFormOpen} onClose={handleFormClose} goal={editingGoal} />
