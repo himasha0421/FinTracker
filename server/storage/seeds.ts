@@ -3,6 +3,8 @@ import type {
   InsertFinancialGoal,
   InsertTransaction,
   TransactionAssignmentInput,
+  InsertInvestment,
+  InsertInvestmentContribution,
 } from '@shared/schema';
 import type { IStorage } from './types';
 
@@ -190,6 +192,116 @@ function buildGoalSeeds(now: Date): InsertFinancialGoal[] {
   ];
 }
 
+function buildInvestmentSeeds(accountIds: Record<string, number>): InsertInvestment[] {
+  const investmentAccountId = accountIds['Investment Portfolio'];
+
+  return [
+    {
+      name: 'Vanguard S&P 500 ETF',
+      type: 'etf',
+      accountId: investmentAccountId,
+      symbol: 'VOO',
+      institution: 'Vanguard',
+      currency: 'USD',
+      currentValue: '12500.00',
+      monthlyContribution: '400.00',
+      notes: 'Core index position',
+    },
+    {
+      name: 'Bitcoin',
+      type: 'crypto',
+      accountId: investmentAccountId,
+      symbol: 'BTC',
+      institution: 'Coinbase',
+      currency: 'USD',
+      currentValue: '5200.00',
+      monthlyContribution: '100.00',
+      notes: 'Long-term allocation',
+    },
+    {
+      name: 'Balanced Mutual Fund',
+      type: 'mutual_fund',
+      accountId: investmentAccountId,
+      symbol: 'VBAL',
+      institution: 'Vanguard',
+      currency: 'USD',
+      currentValue: '8000.00',
+      monthlyContribution: '200.00',
+      notes: 'Diversified mix',
+    },
+    {
+      name: '1-Year GIC',
+      type: 'gic',
+      accountId: investmentAccountId,
+      institution: 'TD',
+      currency: 'USD',
+      currentValue: '5000.00',
+      monthlyContribution: '0.00',
+      notes: 'Fixed income ladder',
+    },
+  ];
+}
+
+function buildInvestmentContributionSeeds(
+  now: Date,
+  investmentIds: Record<string, number>
+): InsertInvestmentContribution[] {
+  const makeDate = (monthsAgo: number, day = 5) =>
+    new Date(now.getFullYear(), now.getMonth() - monthsAgo, day, 12, 0, 0);
+
+  return [
+    {
+      investmentId: investmentIds['Vanguard S&P 500 ETF'],
+      amount: '400.00',
+      date: makeDate(0),
+      type: 'contribution',
+      notes: 'Monthly auto-buy',
+    },
+    {
+      investmentId: investmentIds['Vanguard S&P 500 ETF'],
+      amount: '400.00',
+      date: makeDate(1),
+      type: 'contribution',
+      notes: 'Monthly auto-buy',
+    },
+    {
+      investmentId: investmentIds['Bitcoin'],
+      amount: '100.00',
+      date: makeDate(0, 12),
+      type: 'contribution',
+      notes: 'DCA',
+    },
+    {
+      investmentId: investmentIds['Bitcoin'],
+      amount: '100.00',
+      date: makeDate(1, 12),
+      type: 'contribution',
+      notes: 'DCA',
+    },
+    {
+      investmentId: investmentIds['Balanced Mutual Fund'],
+      amount: '200.00',
+      date: makeDate(0, 20),
+      type: 'contribution',
+      notes: 'Monthly auto-invest',
+    },
+    {
+      investmentId: investmentIds['Balanced Mutual Fund'],
+      amount: '200.00',
+      date: makeDate(1, 20),
+      type: 'contribution',
+      notes: 'Monthly auto-invest',
+    },
+    {
+      investmentId: investmentIds['1-Year GIC'],
+      amount: '5000.00',
+      date: makeDate(4, 10),
+      type: 'contribution',
+      notes: 'Lump sum deposit',
+    },
+  ];
+}
+
 export async function seedStorage(storage: IStorage, now = new Date()) {
   const accountIdMap: Record<string, number> = {};
 
@@ -206,5 +318,17 @@ export async function seedStorage(storage: IStorage, now = new Date()) {
   const goals = buildGoalSeeds(now);
   for (const goal of goals) {
     await storage.createFinancialGoal(goal);
+  }
+
+  const investmentIdMap: Record<string, number> = {};
+  const investments = buildInvestmentSeeds(accountIdMap);
+  for (const investment of investments) {
+    const created = await storage.createInvestment(investment);
+    investmentIdMap[investment.name] = created.id;
+  }
+
+  const contributions = buildInvestmentContributionSeeds(now, investmentIdMap);
+  for (const contribution of contributions) {
+    await storage.createInvestmentContribution(contribution);
   }
 }

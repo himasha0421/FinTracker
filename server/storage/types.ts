@@ -11,6 +11,10 @@ import {
   User,
   InsertUser,
   TransactionAssignmentInput,
+  Investment,
+  InsertInvestment,
+  InvestmentContribution,
+  InsertInvestmentContribution,
 } from '@shared/schema';
 
 export interface IStorage {
@@ -53,4 +57,21 @@ export interface IStorage {
     linkedAccountIds?: number[]
   ): Promise<FinancialGoal | undefined>;
   deleteFinancialGoal(id: number): Promise<boolean>;
+
+  getInvestments(): Promise<Investment[]>;
+  getInvestment(id: number): Promise<Investment | undefined>;
+  createInvestment(investment: InsertInvestment): Promise<Investment>;
+  updateInvestment(id: number, investment: Partial<InsertInvestment>): Promise<Investment | undefined>;
+  deleteInvestment(id: number): Promise<boolean>;
+
+  getInvestmentContributions(investmentId?: number): Promise<InvestmentContribution[]>;
+  getInvestmentContribution(id: number): Promise<InvestmentContribution | undefined>;
+  createInvestmentContribution(
+    contribution: InsertInvestmentContribution
+  ): Promise<InvestmentContribution>;
+  updateInvestmentContribution(
+    id: number,
+    contribution: Partial<InsertInvestmentContribution>
+  ): Promise<InvestmentContribution | undefined>;
+  deleteInvestmentContribution(id: number): Promise<boolean>;
 }

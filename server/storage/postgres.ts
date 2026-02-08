@@ -11,12 +11,18 @@ import {
   TransactionAssignmentInput,
   FinancialGoal,
   InsertFinancialGoal,
+  Investment,
+  InsertInvestment,
+  InvestmentContribution,
+  InsertInvestmentContribution,
   User,
   InsertUser,
   accounts,
   transactions,
   transactionAssignments,
   financialGoals,
+  investments,
+  investmentContributions,
   users,
   financialGoalAccounts,
   InsertFinancialGoalAccount,
@@ -380,6 +386,86 @@ export class PostgresStorage implements IStorage {
 
   async deleteFinancialGoal(id: number): Promise<boolean> {
     const result = await db.delete(financialGoals).where(eq(financialGoals.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getInvestments(): Promise<Investment[]> {
+    return db.select().from(investments);
+  }
+
+  async getInvestment(id: number): Promise<Investment | undefined> {
+    const result = await db.select().from(investments).where(eq(investments.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createInvestment(insertInvestment: InsertInvestment): Promise<Investment> {
+    const result = await db.insert(investments).values(insertInvestment).returning();
+    return result[0];
+  }
+
+  async updateInvestment(
+    id: number,
+    investmentData: Partial<InsertInvestment>
+  ): Promise<Investment | undefined> {
+    const result = await db
+      .update(investments)
+      .set(investmentData)
+      .where(eq(investments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteInvestment(id: number): Promise<boolean> {
+    const result = await db.delete(investments).where(eq(investments.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getInvestmentContributions(
+    investmentId?: number
+  ): Promise<InvestmentContribution[]> {
+    let query = db.select().from(investmentContributions);
+    if (investmentId !== undefined) {
+      query = query.where(eq(investmentContributions.investmentId, investmentId));
+    }
+    return query.orderBy(desc(investmentContributions.date));
+  }
+
+  async getInvestmentContribution(id: number): Promise<InvestmentContribution | undefined> {
+    const result = await db
+      .select()
+      .from(investmentContributions)
+      .where(eq(investmentContributions.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createInvestmentContribution(
+    insertContribution: InsertInvestmentContribution
+  ): Promise<InvestmentContribution> {
+    const result = await db
+      .insert(investmentContributions)
+      .values(insertContribution)
+      .returning();
+    return result[0];
+  }
+
+  async updateInvestmentContribution(
+    id: number,
+    contributionData: Partial<InsertInvestmentContribution>
+  ): Promise<InvestmentContribution | undefined> {
+    const result = await db
+      .update(investmentContributions)
+      .set(contributionData)
+      .where(eq(investmentContributions.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteInvestmentContribution(id: number): Promise<boolean> {
+    const result = await db
+      .delete(investmentContributions)
+      .where(eq(investmentContributions.id, id))
+      .returning();
     return result.length > 0;
   }
 

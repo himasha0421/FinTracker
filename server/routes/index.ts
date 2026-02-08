@@ -2,10 +2,13 @@ import { Router } from 'express';
 import { AccountService } from '../services/accountService';
 import { TransactionService } from '../services/transactionService';
 import { GoalService } from '../services/goalService';
+import { InvestmentService } from '../services/investmentService';
 import { storage } from '../storage';
 import { createAccountsRouter } from './accounts';
 import { createTransactionsRouter } from './transactions';
 import { createGoalsRouter } from './goals';
+import { createInvestmentsRouter } from './investments';
+import { createInvestmentContributionsRouter } from './investmentContributions';
 import { wrap } from './utils';
 import { HttpError } from '../errors';
 
@@ -15,6 +18,7 @@ export function createApiRouter() {
   const accountService = new AccountService(storage);
   const transactionService = new TransactionService(storage);
   const goalService = new GoalService(storage);
+  const investmentService = new InvestmentService(storage);
 
   router.get(
     '/balance',
@@ -36,6 +40,11 @@ export function createApiRouter() {
   router.use('/accounts', createAccountsRouter(accountService));
   router.use('/transactions', createTransactionsRouter(transactionService));
   router.use('/goals', createGoalsRouter(goalService));
+  router.use('/investments', createInvestmentsRouter(investmentService));
+  router.use(
+    '/investment-contributions',
+    createInvestmentContributionsRouter(investmentService)
+  );
 
   router.use(
     '*',

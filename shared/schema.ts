@@ -17,6 +17,44 @@ export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true 
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
 export type Account = typeof accounts.$inferSelect;
 
+// Investment table
+export const investments = pgTable('investments', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  type: text('type').notNull(), // etf, crypto, mutual_fund, gic, stock, bond, other
+  accountId: integer('account_id').references(() => accounts.id, { onDelete: 'set null' }),
+  symbol: text('symbol'),
+  institution: text('institution'),
+  currency: text('currency').default('USD').notNull(),
+  currentValue: decimal('current_value', { precision: 12, scale: 2 }).default('0').notNull(),
+  monthlyContribution: decimal('monthly_contribution', { precision: 12, scale: 2 })
+    .default('0')
+    .notNull(),
+  notes: text('notes'),
+});
+
+export const insertInvestmentSchema = createInsertSchema(investments).omit({ id: true });
+export type InsertInvestment = z.infer<typeof insertInvestmentSchema>;
+export type Investment = typeof investments.$inferSelect;
+
+// Investment contribution table
+export const investmentContributions = pgTable('investment_contributions', {
+  id: serial('id').primaryKey(),
+  investmentId: integer('investment_id')
+    .references(() => investments.id, { onDelete: 'cascade' })
+    .notNull(),
+  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  date: timestamp('date').defaultNow().notNull(),
+  type: text('type').notNull(), // contribution, withdrawal
+  notes: text('notes'),
+});
+
+export const insertInvestmentContributionSchema = createInsertSchema(
+  investmentContributions
+).omit({ id: true });
+export type InsertInvestmentContribution = z.infer<typeof insertInvestmentContributionSchema>;
+export type InvestmentContribution = typeof investmentContributions.$inferSelect;
+
 // Transaction table
 export const transactions = pgTable('transactions', {
   id: serial('id').primaryKey(),

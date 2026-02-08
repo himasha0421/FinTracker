@@ -16,8 +16,24 @@ import {
 } from '@/features/transactions/api';
 import { createGoal, deleteGoal, goalKeys, updateGoal } from '@/features/goals/api';
 import type { GoalPayload, UpdateGoalPayload } from '@/features/goals/api';
+import {
+  createInvestment,
+  deleteInvestment as deleteInvestmentApi,
+  investmentContributionKeys,
+  investmentKeys,
+  updateInvestment as updateInvestmentApi,
+  createInvestmentContribution,
+  updateInvestmentContribution as updateInvestmentContributionApi,
+  deleteInvestmentContribution as deleteInvestmentContributionApi,
+} from '@/features/investment/api';
 import type { Account } from '@shared/schema';
 import type { CreateTransactionPayload, UpdateTransactionPayload } from '@/features/transactions/types';
+import type {
+  CreateInvestmentPayload,
+  UpdateInvestmentPayload,
+  CreateContributionPayload,
+  UpdateContributionPayload,
+} from '@/features/investment/types';
 
 type FinanceContextType = {
   isLoading: boolean;
@@ -33,6 +49,12 @@ type FinanceContextType = {
   addFinancialGoal: (data: GoalPayload) => Promise<void>;
   updateFinancialGoal: (id: number, data: UpdateGoalPayload) => Promise<void>;
   deleteFinancialGoal: (id: number) => Promise<void>;
+  addInvestment: (data: CreateInvestmentPayload) => Promise<void>;
+  updateInvestment: (id: number, data: UpdateInvestmentPayload) => Promise<void>;
+  deleteInvestment: (id: number) => Promise<void>;
+  addInvestmentContribution: (data: CreateContributionPayload) => Promise<void>;
+  updateInvestmentContribution: (id: number, data: UpdateContributionPayload) => Promise<void>;
+  deleteInvestmentContribution: (id: number) => Promise<void>;
 };
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -66,6 +88,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       await queryClient.invalidateQueries({ queryKey: accountKeys.all });
       await queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       await queryClient.invalidateQueries({ queryKey: goalKeys.all });
+      await queryClient.invalidateQueries({ queryKey: investmentKeys.all });
+      await queryClient.invalidateQueries({ queryKey: investmentContributionKeys.all });
       await fetchTotalBalance();
     } catch (error) {
       toast({
@@ -266,6 +290,131 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Investment operations
+  const addInvestment = async (data: CreateInvestmentPayload) => {
+    setIsLoading(true);
+    try {
+      await createInvestment(data);
+      await queryClient.invalidateQueries({ queryKey: investmentKeys.all });
+      toast({
+        title: 'Success',
+        description: 'Investment added successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add investment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateInvestment = async (id: number, data: UpdateInvestmentPayload) => {
+    setIsLoading(true);
+    try {
+      await updateInvestmentApi(id, data);
+      await queryClient.invalidateQueries({ queryKey: investmentKeys.all });
+      toast({
+        title: 'Success',
+        description: 'Investment updated successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update investment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteInvestment = async (id: number) => {
+    setIsLoading(true);
+    try {
+      await deleteInvestmentApi(id);
+      await queryClient.invalidateQueries({ queryKey: investmentKeys.all });
+      await queryClient.invalidateQueries({ queryKey: investmentContributionKeys.all });
+      toast({
+        title: 'Success',
+        description: 'Investment deleted successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete investment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addInvestmentContribution = async (data: CreateContributionPayload) => {
+    setIsLoading(true);
+    try {
+      await createInvestmentContribution(data);
+      await queryClient.invalidateQueries({ queryKey: investmentContributionKeys.all });
+      toast({
+        title: 'Success',
+        description: 'Contribution added successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add contribution',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateInvestmentContribution = async (
+    id: number,
+    data: UpdateContributionPayload
+  ) => {
+    setIsLoading(true);
+    try {
+      await updateInvestmentContributionApi(id, data);
+      await queryClient.invalidateQueries({ queryKey: investmentContributionKeys.all });
+      toast({
+        title: 'Success',
+        description: 'Contribution updated successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update contribution',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteInvestmentContribution = async (id: number) => {
+    setIsLoading(true);
+    try {
+      await deleteInvestmentContributionApi(id);
+      await queryClient.invalidateQueries({ queryKey: investmentContributionKeys.all });
+      toast({
+        title: 'Success',
+        description: 'Contribution deleted successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete contribution',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     isLoading,
     totalBalance,
@@ -279,6 +428,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     addFinancialGoal,
     updateFinancialGoal,
     deleteFinancialGoal,
+    addInvestment,
+    updateInvestment,
+    deleteInvestment,
+    addInvestmentContribution,
+    updateInvestmentContribution,
+    deleteInvestmentContribution,
   };
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;

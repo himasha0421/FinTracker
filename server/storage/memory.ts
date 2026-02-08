@@ -11,6 +11,10 @@ import {
   InsertFinancialGoal,
   User,
   InsertUser,
+  Investment,
+  InsertInvestment,
+  InvestmentContribution,
+  InsertInvestmentContribution,
 } from '@shared/schema';
 import { IStorage } from './types';
 
@@ -21,11 +25,15 @@ export class MemoryStorage implements IStorage {
   private transactionAssignments: Map<number, TransactionAssignment[]>;
   private financialGoals: Map<number, FinancialGoal>;
   private goalAccounts: Map<number, Set<number>>;
+  private investments: Map<number, Investment>;
+  private investmentContributions: Map<number, InvestmentContribution>;
 
   private userCurrentId: number;
   private accountCurrentId: number;
   private transactionCurrentId: number;
   private goalCurrentId: number;
+  private investmentCurrentId: number;
+  private investmentContributionCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -34,11 +42,15 @@ export class MemoryStorage implements IStorage {
     this.transactionAssignments = new Map();
     this.financialGoals = new Map();
     this.goalAccounts = new Map();
+    this.investments = new Map();
+    this.investmentContributions = new Map();
 
     this.userCurrentId = 1;
     this.accountCurrentId = 1;
     this.transactionCurrentId = 1;
     this.goalCurrentId = 1;
+    this.investmentCurrentId = 1;
+    this.investmentContributionCurrentId = 1;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -330,6 +342,99 @@ export class MemoryStorage implements IStorage {
   async deleteFinancialGoal(id: number): Promise<boolean> {
     this.goalAccounts.delete(id);
     return this.financialGoals.delete(id);
+  }
+
+  async getInvestments(): Promise<Investment[]> {
+    return Array.from(this.investments.values());
+  }
+
+  async getInvestment(id: number): Promise<Investment | undefined> {
+    return this.investments.get(id);
+  }
+
+  async createInvestment(insertInvestment: InsertInvestment): Promise<Investment> {
+    const id = this.investmentCurrentId++;
+    const investment: Investment = {
+      ...insertInvestment,
+      id,
+      accountId: insertInvestment.accountId ?? null,
+      symbol: insertInvestment.symbol ?? null,
+      institution: insertInvestment.institution ?? null,
+      currency: insertInvestment.currency ?? 'USD',
+      currentValue: insertInvestment.currentValue ?? '0',
+      monthlyContribution: insertInvestment.monthlyContribution ?? '0',
+      notes: insertInvestment.notes ?? null,
+    };
+    this.investments.set(id, investment);
+    return investment;
+  }
+
+  async updateInvestment(
+    id: number,
+    investmentData: Partial<InsertInvestment>
+  ): Promise<Investment | undefined> {
+    const investment = this.investments.get(id);
+    if (!investment) return undefined;
+
+    const updatedInvestment = { ...investment, ...investmentData };
+    this.investments.set(id, updatedInvestment);
+    return updatedInvestment;
+  }
+
+  async deleteInvestment(id: number): Promise<boolean> {
+    const exists = this.investments.delete(id);
+    if (!exists) return false;
+
+    for (const [contributionId, contribution] of this.investmentContributions.entries()) {
+      if (contribution.investmentId === id) {
+        this.investmentContributions.delete(contributionId);
+      }
+    }
+    return true;
+  }
+
+  async getInvestmentContributions(investmentId?: number): Promise<InvestmentContribution[]> {
+    const contributions = Array.from(this.investmentContributions.values())
+      .filter(contribution =>
+        investmentId ? contribution.investmentId === investmentId : true
+      )
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return contributions;
+  }
+
+  async getInvestmentContribution(id: number): Promise<InvestmentContribution | undefined> {
+    return this.investmentContributions.get(id);
+  }
+
+  async createInvestmentContribution(
+    insertContribution: InsertInvestmentContribution
+  ): Promise<InvestmentContribution> {
+    const id = this.investmentContributionCurrentId++;
+    const contribution: InvestmentContribution = {
+      ...insertContribution,
+      id,
+      date: insertContribution.date || new Date(),
+      notes: insertContribution.notes ?? null,
+    };
+    this.investmentContributions.set(id, contribution);
+    return contribution;
+  }
+
+  async updateInvestmentContribution(
+    id: number,
+    contributionData: Partial<InsertInvestmentContribution>
+  ): Promise<InvestmentContribution | undefined> {
+    const contribution = this.investmentContributions.get(id);
+    if (!contribution) return undefined;
+
+    const updatedContribution = { ...contribution, ...contributionData };
+    this.investmentContributions.set(id, updatedContribution);
+    return updatedContribution;
+  }
+
+  async deleteInvestmentContribution(id: number): Promise<boolean> {
+    return this.investmentContributions.delete(id);
   }
 
   private deriveGoalStatus(currentAmount: string, targetAmount: string) {
