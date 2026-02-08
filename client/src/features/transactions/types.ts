@@ -6,10 +6,16 @@ import type {
 
 export type TransactionWithAssignments = SharedTransactionWithAssignments;
 
-export type CreateTransactionPayload = InsertTransaction & {
+export type TransactionDateInput = string | Date;
+
+type TransactionPayloadBase = Omit<InsertTransaction, 'date'> & {
+  date?: TransactionDateInput | null;
+};
+
+export type CreateTransactionPayload = TransactionPayloadBase & {
   assignments: TransactionAssignmentInput[];
 };
 
-export type UpdateTransactionPayload = Partial<InsertTransaction> & {
+export type UpdateTransactionPayload = Partial<TransactionPayloadBase> & {
   assignments?: TransactionAssignmentInput[];
 };

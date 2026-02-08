@@ -33,6 +33,7 @@ export default function InsightsScreen() {
     monthlyData,
     monthlyCategories,
     monthlyTotalsByCategory,
+    subcategoryTotalsByCategory,
     assigneeDistributionData,
     categoriesByAssignee,
     assigneeCategoryTransactions,
@@ -77,6 +78,7 @@ export default function InsightsScreen() {
         isLoading={isLoading}
         budgetMap={budgetMap}
         monthlyTotalsByCategory={monthlyTotalsByCategory}
+        subcategoryTotalsByCategory={subcategoryTotalsByCategory}
       />
     </div>
   );

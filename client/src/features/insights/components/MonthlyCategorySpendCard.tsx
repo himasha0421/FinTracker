@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import {
   Bar,
   BarChart,
@@ -10,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { ChevronDown } from 'lucide-react';
 
 const BAR_COLORS = ['#0f766e', '#f97316', '#2563eb', '#e11d48', '#22c55e', '#facc15'];
 
@@ -19,6 +21,7 @@ type MonthlyCategorySpendCardProps = {
   isLoading: boolean;
   budgetMap: Record<string, number>;
   monthlyTotalsByCategory: Record<string, number>;
+  subcategoryTotalsByCategory: Record<string, Record<string, number>>;
 };
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -33,7 +36,9 @@ export default function MonthlyCategorySpendCard({
   isLoading,
   budgetMap,
   monthlyTotalsByCategory,
+  subcategoryTotalsByCategory,
 }: MonthlyCategorySpendCardProps) {
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const rows = useMemo(() => {
     return categories
       .map(category => {
@@ -114,44 +119,97 @@ export default function MonthlyCategorySpendCard({
           <p className="text-sm text-muted-foreground">Add expense categories to see monthly trends.</p>
         ) : (
           <div className="grid gap-3">
-            {rows.map(row => (
-              <div key={row.category} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
-                <div>
-                  <p className="text-sm font-semibold">{row.category}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Total in range: {currencyFormatter.format(row.total)}
-                  </p>
-                </div>
-                <div className="grid min-w-[220px] grid-cols-2 gap-3 text-right md:min-w-[320px] md:grid-cols-3">
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {currencyFormatter.format(row.monthlyAllocation)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Monthly allocation</p>
+            {rows.map(row => {
+              const subcategoryTotals = subcategoryTotalsByCategory[row.category] ?? {};
+              const subcategoryRows = Object.entries(subcategoryTotals)
+                .map(([name, total]) => ({
+                  name,
+                  total,
+                  percent: row.total > 0 ? (total / row.total) * 100 : 0,
+                }))
+                .sort((a, b) => b.total - a.total);
+              const isExpanded = expandedCategory === row.category;
+
+              return (
+                <div key={row.category} className="rounded-lg border">
+                  <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+                    <div className="flex items-start gap-2">
+                      <div>
+                        <p className="text-sm font-semibold">{row.category}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Total in range: {currencyFormatter.format(row.total)}
+                        </p>
+                      </div>
+                      {subcategoryRows.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="mt-0.5 h-7 w-7"
+                          aria-label={`Toggle ${row.category} subcategories`}
+                          aria-expanded={isExpanded}
+                          onClick={() =>
+                            setExpandedCategory(isExpanded ? null : row.category)
+                          }
+                        >
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform ${
+                              isExpanded ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid min-w-[220px] grid-cols-2 gap-3 text-right md:min-w-[320px] md:grid-cols-3">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {currencyFormatter.format(row.monthlyAllocation)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Monthly allocation</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{row.percentUsed.toFixed(1)}%</p>
+                        <p className="text-xs text-muted-foreground">Budget used</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{currencyFormatter.format(row.budget)}</p>
+                        <p className="text-xs text-muted-foreground">Yearly limit</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className={`text-sm font-semibold ${
+                          row.variance >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                        }`}
+                      >
+                        {row.variance >= 0
+                          ? `${currencyFormatter.format(row.variance)} under`
+                          : `${currencyFormatter.format(Math.abs(row.variance))} over`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Variance</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold">{row.percentUsed.toFixed(1)}%</p>
-                    <p className="text-xs text-muted-foreground">Budget used</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{currencyFormatter.format(row.budget)}</p>
-                    <p className="text-xs text-muted-foreground">Yearly limit</p>
-                  </div>
+                  {subcategoryRows.length > 0 && isExpanded && (
+                    <div className="border-t px-4 py-3">
+                      <div className="grid gap-2">
+                        {subcategoryRows.map(subcategory => (
+                          <div
+                            key={subcategory.name}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <span className="text-muted-foreground">{subcategory.name}</span>
+                            <span className="font-mono">
+                              {currencyFormatter.format(subcategory.total)} •{' '}
+                              {subcategory.percent.toFixed(1)}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  <p
-                    className={`text-sm font-semibold ${
-                      row.variance >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                    }`}
-                  >
-                    {row.variance >= 0
-                      ? `${currencyFormatter.format(row.variance)} under`
-                      : `${currencyFormatter.format(Math.abs(row.variance))} over`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Variance</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

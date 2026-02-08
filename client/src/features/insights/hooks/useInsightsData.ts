@@ -13,6 +13,7 @@ type UseInsightsDataResult = {
   monthlyData: Record<string, any>[];
   monthlyCategories: string[];
   monthlyTotalsByCategory: Record<string, number>;
+  subcategoryTotalsByCategory: Record<string, Record<string, number>>;
   assigneeDistributionData: { name: string; value: number }[];
   categoriesByAssignee: Record<string, { name: string; value: number }[]>;
   assigneeCategoryTransactions: Record<
@@ -179,6 +180,21 @@ export function useInsightsData(
     return totals;
   }, [monthlyComputation.monthlyData, expenseCategories]);
 
+  const subcategoryTotalsByCategory = useMemo(() => {
+    const totals: Record<string, Record<string, number>> = {};
+    dateFilteredTransactions.forEach(transaction => {
+      if (transaction.type !== 'expense' || !transaction.category) return;
+      const rawSubcategory = typeof transaction.subcategory === 'string' ? transaction.subcategory : '';
+      const subcategory = rawSubcategory.trim();
+      if (!subcategory || subcategory === 'None') return;
+      const categoryTotals = totals[transaction.category] ?? {};
+      categoryTotals[subcategory] =
+        (categoryTotals[subcategory] || 0) + Number(transaction.amount);
+      totals[transaction.category] = categoryTotals;
+    });
+    return totals;
+  }, [dateFilteredTransactions]);
+
   const getTransactionsForWeek = useCallback(
     (index: number) => {
       const segment = weeklyComputation.weeklySegments[index];
@@ -266,6 +282,7 @@ export function useInsightsData(
     monthlyData: monthlyComputation.monthlyData,
     monthlyCategories: monthlyComputation.categories,
     monthlyTotalsByCategory,
+    subcategoryTotalsByCategory,
     assigneeDistributionData: assigneeBreakdown.totalsArray,
     categoriesByAssignee: assigneeBreakdown.categoriesByAssignee,
     assigneeCategoryTransactions: assigneeBreakdown.transactionsByAssignee,

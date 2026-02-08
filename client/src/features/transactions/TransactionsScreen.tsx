@@ -51,6 +51,13 @@ function formatDate(date: Date | string) {
   });
 }
 
+const formatCategoryLabel = (transaction: TransactionWithAssignments) => {
+  const category = transaction.category || 'Uncategorized';
+  const subcategory =
+    transaction.subcategory && transaction.subcategory !== 'None' ? transaction.subcategory : null;
+  return subcategory ? `${category} • ${subcategory}` : category;
+};
+
 const normalizeDateValue = (date: Date | string) => {
   const normalized = new Date(date);
   normalized.setHours(0, 0, 0, 0);
@@ -80,7 +87,7 @@ const TransactionRow = ({ transaction, onEdit }: TransactionRowProps) => {
             <div className="font-medium"> {transaction.description} </div>
             <div className="text-xs text-muted-foreground">
               {' '}
-              {transaction.category || 'Uncategorized'}{' '}
+              {formatCategoryLabel(transaction)}{' '}
             </div>
           </div>
         </div>
@@ -151,6 +158,8 @@ export default function TransactionsScreen() {
               transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (transaction.category &&
                 transaction.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+              (transaction.subcategory &&
+                transaction.subcategory.toLowerCase().includes(searchTerm.toLowerCase())) ||
               transaction.assignments.some(assignment =>
                 assignment.assignee.toLowerCase().includes(searchValue)
               );

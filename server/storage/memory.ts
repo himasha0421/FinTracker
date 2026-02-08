@@ -150,6 +150,7 @@ export class MemoryStorage implements IStorage {
       id,
       date: insertTransaction.date || new Date(),
       category: insertTransaction.category || null,
+      subcategory: insertTransaction.subcategory || null,
       icon: insertTransaction.icon || 'credit-card',
     };
     this.transactions.set(id, transaction);

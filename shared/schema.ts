@@ -25,6 +25,7 @@ export const transactions = pgTable('transactions', {
   date: timestamp('date').defaultNow().notNull(),
   accountId: integer('account_id').notNull(),
   category: text('category'),
+  subcategory: text('subcategory'),
   type: text('type').notNull(), // income, expense
   icon: text('icon').default('credit-card'), // Default icon name
 });

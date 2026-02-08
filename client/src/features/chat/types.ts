@@ -21,6 +21,7 @@ export type DifyTransaction = {
   amount: number;
   date: string;
   category: string;
+  subcategory?: string;
   type: 'income' | 'expense';
   icon: string;
   accountId: string;
