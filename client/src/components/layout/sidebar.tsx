@@ -42,9 +42,9 @@ export default function Sidebar() {
     { href: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
     { href: '/transactions', icon: <FileText size={18} />, label: 'Transactions' },
     { href: '/insights', icon: <BarChart2 size={18} />, label: 'Insights' },
+    { href: '/investment', icon: <DollarSign size={18} />, label: 'Investment' },
     { href: '/recommendations', icon: <MessageSquare size={18} />, label: 'Recommendations' },
     { href: '/notes', icon: <Pencil size={18} />, label: 'Notes' },
-    { href: '/investment', icon: <DollarSign size={18} />, label: 'Investment' },
     { href: '/chat', icon: <MessageCircle size={18} />, label: 'AI Assistant' },
   ];
 
