@@ -79,7 +79,7 @@ export class PostgresStorage implements IStorage {
   async getTotalBalance(): Promise<number> {
     const allAccounts = await this.getAccounts();
     return allAccounts.reduce((sum, account) => {
-      if (account.type === 'credit') {
+      if (account.type === 'credit' || account.type === 'loan') {
         return sum - Number(account.balance);
       }
       return sum + Number(account.balance);

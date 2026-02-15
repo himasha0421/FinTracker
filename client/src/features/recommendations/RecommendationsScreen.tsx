@@ -121,8 +121,12 @@ export default function RecommendationsScreen() {
 
     if (accountList.length > 0) {
       const averageBalance =
-        accountList.reduce((sum, account) => sum + Number(account.balance), 0) /
-        accountList.length;
+        accountList.reduce((sum, account) => {
+          const numericBalance = Number(account.balance);
+          const signedBalance =
+            account.type === 'credit' || account.type === 'loan' ? -numericBalance : numericBalance;
+          return sum + signedBalance;
+        }, 0) / accountList.length;
 
       if (totalBalance < averageBalance * 0.5) {
         recommendations.push({

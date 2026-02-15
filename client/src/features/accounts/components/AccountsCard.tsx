@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, Pencil, Plus } from 'lucide-react';
+import { Car, ChevronDown, Pencil, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import AccountForm from '@/features/accounts/components/AccountForm';
 import type { Account } from '@shared/schema';
@@ -63,6 +63,7 @@ const accountIcons: Record<string, JSX.Element> = {
       <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z" />
     </svg>
   ),
+  car: <Car className="h-4 w-4" />,
 };
 
 const colorClasses: Record<string, string> = {
@@ -85,11 +86,13 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2,
 });
 
+const liabilityTypes = new Set(['credit', 'loan']);
+
 const AccountItem = ({ account, onEdit }: AccountItemProps) => {
   const iconKey = account.icon ?? 'wallet';
   const colorKey = account.color ?? 'green';
   const numericBalance = Number(account.balance);
-  const displayBalance = account.type === 'credit' ? -numericBalance : numericBalance;
+  const displayBalance = liabilityTypes.has(account.type) ? -numericBalance : numericBalance;
   const formattedBalance = currencyFormatter.format(displayBalance);
 
   return (
@@ -140,7 +143,7 @@ export default function AccountsCard() {
     accounts.forEach((account) => {
       const groupKey = account.type || 'other';
       const numericBalance = Number(account.balance);
-      const signedBalance = account.type === 'credit' ? -numericBalance : numericBalance;
+      const signedBalance = liabilityTypes.has(account.type) ? -numericBalance : numericBalance;
 
       if (!groups[groupKey]) {
         groups[groupKey] = {

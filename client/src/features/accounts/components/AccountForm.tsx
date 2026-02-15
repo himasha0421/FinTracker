@@ -47,8 +47,8 @@ const accountFormSchema = z.object({
   balance: z.string().refine(val => !isNaN(Number(val)) && Number(val) >= 0, {
     message: 'Balance must be a positive number',
   }),
-  type: z.enum(['savings', 'checking', 'credit', 'investment']),
-  icon: z.enum(['wallet', 'scale', 'credit-card', 'plus-square']),
+  type: z.enum(['savings', 'checking', 'credit', 'investment', 'loan']),
+  icon: z.enum(['wallet', 'scale', 'credit-card', 'plus-square', 'car']),
   color: z.enum(['green', 'blue', 'purple', 'red', 'yellow']),
 });
 
@@ -57,6 +57,7 @@ const accountTypes = [
   { value: 'checking', label: 'Checking' },
   { value: 'credit', label: 'Credit Card' },
   { value: 'investment', label: 'Investment' },
+  { value: 'loan', label: 'Loan (Liability)' },
 ];
 
 const iconOptions = [
@@ -64,6 +65,7 @@ const iconOptions = [
   { value: 'scale', label: 'Scale' },
   { value: 'credit-card', label: 'Credit Card' },
   { value: 'plus-square', label: 'Investment' },
+  { value: 'car', label: 'Auto Loan' },
 ];
 
 const colorOptions = [
@@ -85,8 +87,8 @@ type AccountType = AccountFormValues['type'];
 type AccountIcon = AccountFormValues['icon'];
 type AccountColor = AccountFormValues['color'];
 
-const accountTypesSet: AccountType[] = ['savings', 'checking', 'credit', 'investment'];
-const accountIconsSet: AccountIcon[] = ['wallet', 'scale', 'credit-card', 'plus-square'];
+const accountTypesSet: AccountType[] = ['savings', 'checking', 'credit', 'investment', 'loan'];
+const accountIconsSet: AccountIcon[] = ['wallet', 'scale', 'credit-card', 'plus-square', 'car'];
 const accountColorsSet: AccountColor[] = ['green', 'blue', 'purple', 'red', 'yellow'];
 
 const getDefaultValues = (account?: Account | null): AccountFormValues => {

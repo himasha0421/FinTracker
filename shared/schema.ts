@@ -8,7 +8,7 @@ export const accounts = pgTable('accounts', {
   name: text('name').notNull(),
   description: text('description'),
   balance: decimal('balance', { precision: 12, scale: 2 }).default('0').notNull(),
-  type: text('type').notNull(), // savings, checking, credit, investment
+  type: text('type').notNull(), // savings, checking, credit, investment, loan
   icon: text('icon').default('wallet'), // Default icon name
   color: text('color').default('green'), // Default color name
 });
