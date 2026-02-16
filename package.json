@@ -7,6 +7,8 @@
     "dev": "tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
+    "mcp:stdio": "tsx server/mcp/index.ts --transport stdio",
+    "mcp:sse": "tsx server/mcp/index.ts --transport sse",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "seed": "tsx server/scripts/seed.ts",
