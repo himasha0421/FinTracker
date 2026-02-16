@@ -93,3 +93,47 @@ If you need to revert to in-memory storage:
 - **Start Production Server**
   ```bash
   npm start
+  ```
+
+## MCP Server (for OpenClaw / other MCP clients)
+
+This repo now includes an MCP server that exposes finance analytics tools:
+
+- `list_accounts`
+- `get_transactions`
+- `get_transaction_breakdown` (assignee/category/subcategory/account/month)
+- `get_cashflow_timeseries`
+- `get_financial_overview`
+- `get_goal_progress`
+- `get_investment_overview`
+- `get_investment_holdings`
+- `get_investment_assets`
+- `get_investment_contributions`
+- `get_investment_summary`
+
+### Run on stdio (local MCP client)
+
+```bash
+node --import tsx/esm server/mcp/index.ts --transport stdio
+```
+
+Important: avoid `npm run mcp:stdio` for MCP clients unless you pass `-s` (`npm run -s mcp:stdio`).
+`npm run` prints script banner lines (starting with `>`) to stdout, which corrupt MCP stdio JSON framing.
+
+### Run over LAN using SSE (remote machine)
+
+```bash
+MCP_HOST=0.0.0.0 MCP_PORT=3001 MCP_AUTH_TOKEN=change-me npm run mcp:sse
+```
+
+SSE endpoints:
+
+- Stream endpoint: `http://<TRACKER_IP>:3001/sse`
+- Message endpoint: `http://<TRACKER_IP>:3001/messages?sessionId=...`
+
+If `MCP_AUTH_TOKEN` is set, send `Authorization: Bearer <token>` from the MCP client.
+
+### Notes
+
+- Keep your Financial Tracker API and MCP server on your private LAN only.
+- Prefer router DHCP reservation for a stable `<TRACKER_IP>`.
