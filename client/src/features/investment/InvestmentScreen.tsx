@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { InvestmentItem, InvestmentContributionItem } from '@/features/investment/types';
 import {
+  investmentGroupsListQuery,
   investmentsListQuery,
   investmentContributionsListQuery,
 } from '@/features/investment/api';
@@ -21,8 +22,10 @@ import {
   formatTypeLabel,
   getSignedContributionAmount,
 } from '@/features/investment/utils';
+import { useFinance } from '@/lib/context';
 
 export default function InvestmentScreen() {
+  const { addInvestmentGroup, updateInvestment, isLoading: isMutating } = useFinance();
   const [isInvestmentFormOpen, setIsInvestmentFormOpen] = useState(false);
   const [isContributionFormOpen, setIsContributionFormOpen] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<InvestmentItem | null>(null);
@@ -33,6 +36,9 @@ export default function InvestmentScreen() {
 
   const { data: investments = [], isLoading: isLoadingInvestments } = useQuery(
     investmentsListQuery()
+  );
+  const { data: investmentGroups = [], isLoading: isLoadingGroups } = useQuery(
+    investmentGroupsListQuery()
   );
   const { data: contributions = [], isLoading: isLoadingContributions } = useQuery(
     investmentContributionsListQuery()
@@ -198,6 +204,20 @@ export default function InvestmentScreen() {
   const isLoading = isLoadingInvestments || isLoadingContributions;
   const canAddContribution = investments.length > 0;
 
+  const handleCreateGroup = async (name: string, description: string) => {
+    await addInvestmentGroup({
+      name: name.trim(),
+      description: description.trim() ? description.trim() : null,
+    });
+  };
+
+  const handleMoveInvestmentToGroup = async (
+    investmentId: number,
+    groupId: number | null
+  ) => {
+    await updateInvestment(investmentId, { groupId });
+  };
+
   return (
     <div className="space-y-6">
       <InvestmentHeader
@@ -233,10 +253,14 @@ export default function InvestmentScreen() {
 
         <TabsContent value="holdings" className="space-y-6">
           <InvestmentHoldings
-            isLoading={isLoadingInvestments}
+            isLoading={isLoadingInvestments || isLoadingGroups}
             investments={nonAssetInvestments}
+            groups={investmentGroups}
             contributionsByInvestment={contributionsByInvestment}
             accountsById={accountsById}
+            isMutating={isMutating}
+            onCreateGroup={handleCreateGroup}
+            onMoveInvestmentToGroup={handleMoveInvestmentToGroup}
             onEditInvestment={handleEditInvestment}
             onAddContribution={handleAddContribution}
           />

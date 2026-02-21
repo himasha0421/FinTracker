@@ -13,6 +13,8 @@ import {
   InsertFinancialGoal,
   Investment,
   InsertInvestment,
+  InvestmentGroup,
+  InsertInvestmentGroup,
   InvestmentContribution,
   InsertInvestmentContribution,
   User,
@@ -21,6 +23,7 @@ import {
   transactions,
   transactionAssignments,
   financialGoals,
+  investmentGroups,
   investments,
   investmentContributions,
   users,
@@ -386,6 +389,44 @@ export class PostgresStorage implements IStorage {
 
   async deleteFinancialGoal(id: number): Promise<boolean> {
     const result = await db.delete(financialGoals).where(eq(financialGoals.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getInvestmentGroups(): Promise<InvestmentGroup[]> {
+    return db.select().from(investmentGroups).orderBy(investmentGroups.name);
+  }
+
+  async getInvestmentGroup(id: number): Promise<InvestmentGroup | undefined> {
+    const result = await db
+      .select()
+      .from(investmentGroups)
+      .where(eq(investmentGroups.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createInvestmentGroup(insertGroup: InsertInvestmentGroup): Promise<InvestmentGroup> {
+    const result = await db.insert(investmentGroups).values(insertGroup).returning();
+    return result[0];
+  }
+
+  async updateInvestmentGroup(
+    id: number,
+    groupData: Partial<InsertInvestmentGroup>
+  ): Promise<InvestmentGroup | undefined> {
+    const result = await db
+      .update(investmentGroups)
+      .set(groupData)
+      .where(eq(investmentGroups.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteInvestmentGroup(id: number): Promise<boolean> {
+    const result = await db
+      .delete(investmentGroups)
+      .where(eq(investmentGroups.id, id))
+      .returning();
     return result.length > 0;
   }
 

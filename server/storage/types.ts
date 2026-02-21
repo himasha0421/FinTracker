@@ -13,6 +13,8 @@ import {
   TransactionAssignmentInput,
   Investment,
   InsertInvestment,
+  InvestmentGroup,
+  InsertInvestmentGroup,
   InvestmentContribution,
   InsertInvestmentContribution,
 } from '@shared/schema';
@@ -57,6 +59,15 @@ export interface IStorage {
     linkedAccountIds?: number[]
   ): Promise<FinancialGoal | undefined>;
   deleteFinancialGoal(id: number): Promise<boolean>;
+
+  getInvestmentGroups(): Promise<InvestmentGroup[]>;
+  getInvestmentGroup(id: number): Promise<InvestmentGroup | undefined>;
+  createInvestmentGroup(group: InsertInvestmentGroup): Promise<InvestmentGroup>;
+  updateInvestmentGroup(
+    id: number,
+    group: Partial<InsertInvestmentGroup>
+  ): Promise<InvestmentGroup | undefined>;
+  deleteInvestmentGroup(id: number): Promise<boolean>;
 
   getInvestments(): Promise<Investment[]>;
   getInvestment(id: number): Promise<Investment | undefined>;

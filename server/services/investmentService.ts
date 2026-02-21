@@ -1,10 +1,11 @@
 import {
   insertInvestmentSchema,
+  insertInvestmentGroupSchema,
   insertInvestmentContributionSchema,
 } from '@shared/schema';
 import type { IStorage } from '../storage';
 
-function normalizeInvestmentPayload(payload: any) {
+function normalizeInvestmentPayload(payload: any, partial = false) {
   const data = { ...payload };
 
   const normalizeDecimal = (value: any, fallback = '0') => {
@@ -12,17 +13,39 @@ function normalizeInvestmentPayload(payload: any) {
     return value;
   };
 
-  if (data.accountId === '' || data.accountId === undefined) {
+  if (data.groupId === '' || data.groupId === null) {
+    data.groupId = null;
+  } else if (data.groupId !== undefined) {
+    const parsed = Number(data.groupId);
+    if (!Number.isNaN(parsed)) {
+      data.groupId = parsed;
+    }
+  } else if (!partial) {
+    data.groupId = null;
+  }
+
+  if (data.accountId === '' || data.accountId === null) {
     data.accountId = null;
-  } else if (data.accountId !== null) {
+  } else if (data.accountId !== undefined) {
     const parsed = Number(data.accountId);
     if (!Number.isNaN(parsed)) {
       data.accountId = parsed;
     }
+  } else if (!partial) {
+    data.accountId = null;
   }
 
-  data.currentValue = normalizeDecimal(data.currentValue);
-  data.monthlyContribution = normalizeDecimal(data.monthlyContribution);
+  if (partial) {
+    if (data.currentValue !== undefined) {
+      data.currentValue = normalizeDecimal(data.currentValue);
+    }
+    if (data.monthlyContribution !== undefined) {
+      data.monthlyContribution = normalizeDecimal(data.monthlyContribution);
+    }
+  } else {
+    data.currentValue = normalizeDecimal(data.currentValue);
+    data.monthlyContribution = normalizeDecimal(data.monthlyContribution);
+  }
 
   if (typeof data.symbol === 'string' && data.symbol.trim() === '') {
     data.symbol = null;
@@ -35,6 +58,23 @@ function normalizeInvestmentPayload(payload: any) {
   }
   if (typeof data.currency === 'string' && data.currency.trim() === '') {
     data.currency = 'USD';
+  }
+
+  return data;
+}
+
+function normalizeInvestmentGroupPayload(payload: any) {
+  const data = { ...payload };
+
+  if (typeof data.name === 'string') {
+    data.name = data.name.trim();
+    if (!data.name) {
+      data.name = undefined;
+    }
+  }
+
+  if (typeof data.description === 'string' && data.description.trim() === '') {
+    data.description = null;
   }
 
   return data;
@@ -69,6 +109,30 @@ function normalizeContributionPayload(payload: any) {
 export class InvestmentService {
   constructor(private storage: IStorage) {}
 
+  listGroups() {
+    return this.storage.getInvestmentGroups();
+  }
+
+  getGroup(id: number) {
+    return this.storage.getInvestmentGroup(id);
+  }
+
+  createGroup(payload: unknown) {
+    const normalized = normalizeInvestmentGroupPayload(payload);
+    const data = insertInvestmentGroupSchema.parse(normalized);
+    return this.storage.createInvestmentGroup(data);
+  }
+
+  updateGroup(id: number, payload: unknown) {
+    const normalized = normalizeInvestmentGroupPayload(payload);
+    const data = insertInvestmentGroupSchema.partial().parse(normalized);
+    return this.storage.updateInvestmentGroup(id, data);
+  }
+
+  deleteGroup(id: number) {
+    return this.storage.deleteInvestmentGroup(id);
+  }
+
   listInvestments() {
     return this.storage.getInvestments();
   }
@@ -78,13 +142,13 @@ export class InvestmentService {
   }
 
   createInvestment(payload: unknown) {
-    const normalized = normalizeInvestmentPayload(payload);
+    const normalized = normalizeInvestmentPayload(payload, false);
     const data = insertInvestmentSchema.parse(normalized);
     return this.storage.createInvestment(data);
   }
 
   updateInvestment(id: number, payload: unknown) {
-    const normalized = normalizeInvestmentPayload(payload);
+    const normalized = normalizeInvestmentPayload(payload, true);
     const data = insertInvestmentSchema.partial().parse(normalized);
     return this.storage.updateInvestment(id, data);
   }

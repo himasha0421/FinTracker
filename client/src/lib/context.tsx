@@ -18,10 +18,14 @@ import { createGoal, deleteGoal, goalKeys, updateGoal } from '@/features/goals/a
 import type { GoalPayload, UpdateGoalPayload } from '@/features/goals/api';
 import {
   createInvestment,
+  createInvestmentGroup,
   deleteInvestment as deleteInvestmentApi,
+  deleteInvestmentGroup as deleteInvestmentGroupApi,
   investmentContributionKeys,
+  investmentGroupKeys,
   investmentKeys,
   updateInvestment as updateInvestmentApi,
+  updateInvestmentGroup as updateInvestmentGroupApi,
   createInvestmentContribution,
   updateInvestmentContribution as updateInvestmentContributionApi,
   deleteInvestmentContribution as deleteInvestmentContributionApi,
@@ -31,6 +35,8 @@ import type { CreateTransactionPayload, UpdateTransactionPayload } from '@/featu
 import type {
   CreateInvestmentPayload,
   UpdateInvestmentPayload,
+  CreateInvestmentGroupPayload,
+  UpdateInvestmentGroupPayload,
   CreateContributionPayload,
   UpdateContributionPayload,
 } from '@/features/investment/types';
@@ -52,6 +58,9 @@ type FinanceContextType = {
   addInvestment: (data: CreateInvestmentPayload) => Promise<void>;
   updateInvestment: (id: number, data: UpdateInvestmentPayload) => Promise<void>;
   deleteInvestment: (id: number) => Promise<void>;
+  addInvestmentGroup: (data: CreateInvestmentGroupPayload) => Promise<void>;
+  updateInvestmentGroup: (id: number, data: UpdateInvestmentGroupPayload) => Promise<void>;
+  deleteInvestmentGroup: (id: number) => Promise<void>;
   addInvestmentContribution: (data: CreateContributionPayload) => Promise<void>;
   updateInvestmentContribution: (id: number, data: UpdateContributionPayload) => Promise<void>;
   deleteInvestmentContribution: (id: number) => Promise<void>;
@@ -88,6 +97,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       await queryClient.invalidateQueries({ queryKey: accountKeys.all });
       await queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       await queryClient.invalidateQueries({ queryKey: goalKeys.all });
+      await queryClient.invalidateQueries({ queryKey: investmentGroupKeys.all });
       await queryClient.invalidateQueries({ queryKey: investmentKeys.all });
       await queryClient.invalidateQueries({ queryKey: investmentContributionKeys.all });
       await fetchTotalBalance();
@@ -352,6 +362,70 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addInvestmentGroup = async (data: CreateInvestmentGroupPayload) => {
+    setIsLoading(true);
+    try {
+      await createInvestmentGroup(data);
+      await queryClient.invalidateQueries({ queryKey: investmentGroupKeys.all });
+      toast({
+        title: 'Success',
+        description: 'Investment group added successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add investment group',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateInvestmentGroup = async (
+    id: number,
+    data: UpdateInvestmentGroupPayload
+  ) => {
+    setIsLoading(true);
+    try {
+      await updateInvestmentGroupApi(id, data);
+      await queryClient.invalidateQueries({ queryKey: investmentGroupKeys.all });
+      toast({
+        title: 'Success',
+        description: 'Investment group updated successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update investment group',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteInvestmentGroup = async (id: number) => {
+    setIsLoading(true);
+    try {
+      await deleteInvestmentGroupApi(id);
+      await queryClient.invalidateQueries({ queryKey: investmentGroupKeys.all });
+      await queryClient.invalidateQueries({ queryKey: investmentKeys.all });
+      toast({
+        title: 'Success',
+        description: 'Investment group deleted successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete investment group',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const addInvestmentContribution = async (data: CreateContributionPayload) => {
     setIsLoading(true);
     try {
@@ -431,6 +505,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     addInvestment,
     updateInvestment,
     deleteInvestment,
+    addInvestmentGroup,
+    updateInvestmentGroup,
+    deleteInvestmentGroup,
     addInvestmentContribution,
     updateInvestmentContribution,
     deleteInvestmentContribution,

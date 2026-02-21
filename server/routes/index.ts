@@ -9,6 +9,7 @@ import { createTransactionsRouter } from './transactions';
 import { createGoalsRouter } from './goals';
 import { createInvestmentsRouter } from './investments';
 import { createInvestmentContributionsRouter } from './investmentContributions';
+import { createInvestmentGroupsRouter } from './investmentGroups';
 import { wrap } from './utils';
 import { HttpError } from '../errors';
 
@@ -40,6 +41,7 @@ export function createApiRouter() {
   router.use('/accounts', createAccountsRouter(accountService));
   router.use('/transactions', createTransactionsRouter(transactionService));
   router.use('/goals', createGoalsRouter(goalService));
+  router.use('/investment-groups', createInvestmentGroupsRouter(investmentService));
   router.use('/investments', createInvestmentsRouter(investmentService));
   router.use(
     '/investment-contributions',

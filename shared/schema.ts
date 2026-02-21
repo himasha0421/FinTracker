@@ -17,11 +17,27 @@ export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true 
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
 export type Account = typeof accounts.$inferSelect;
 
+// Investment groups table
+export const investmentGroups = pgTable('investment_groups', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const insertInvestmentGroupSchema = createInsertSchema(investmentGroups).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertInvestmentGroup = z.infer<typeof insertInvestmentGroupSchema>;
+export type InvestmentGroup = typeof investmentGroups.$inferSelect;
+
 // Investment table
 export const investments = pgTable('investments', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   type: text('type').notNull(), // etf, crypto, mutual_fund, gic, stock, bond, other
+  groupId: integer('group_id').references(() => investmentGroups.id, { onDelete: 'set null' }),
   accountId: integer('account_id').references(() => accounts.id, { onDelete: 'set null' }),
   symbol: text('symbol'),
   institution: text('institution'),

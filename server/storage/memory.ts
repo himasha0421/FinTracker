@@ -13,6 +13,8 @@ import {
   InsertUser,
   Investment,
   InsertInvestment,
+  InvestmentGroup,
+  InsertInvestmentGroup,
   InvestmentContribution,
   InsertInvestmentContribution,
 } from '@shared/schema';
@@ -25,6 +27,7 @@ export class MemoryStorage implements IStorage {
   private transactionAssignments: Map<number, TransactionAssignment[]>;
   private financialGoals: Map<number, FinancialGoal>;
   private goalAccounts: Map<number, Set<number>>;
+  private investmentGroups: Map<number, InvestmentGroup>;
   private investments: Map<number, Investment>;
   private investmentContributions: Map<number, InvestmentContribution>;
 
@@ -32,6 +35,7 @@ export class MemoryStorage implements IStorage {
   private accountCurrentId: number;
   private transactionCurrentId: number;
   private goalCurrentId: number;
+  private investmentGroupCurrentId: number;
   private investmentCurrentId: number;
   private investmentContributionCurrentId: number;
 
@@ -42,6 +46,7 @@ export class MemoryStorage implements IStorage {
     this.transactionAssignments = new Map();
     this.financialGoals = new Map();
     this.goalAccounts = new Map();
+    this.investmentGroups = new Map();
     this.investments = new Map();
     this.investmentContributions = new Map();
 
@@ -49,6 +54,7 @@ export class MemoryStorage implements IStorage {
     this.accountCurrentId = 1;
     this.transactionCurrentId = 1;
     this.goalCurrentId = 1;
+    this.investmentGroupCurrentId = 1;
     this.investmentCurrentId = 1;
     this.investmentContributionCurrentId = 1;
   }
@@ -344,6 +350,56 @@ export class MemoryStorage implements IStorage {
     return this.financialGoals.delete(id);
   }
 
+  async getInvestmentGroups(): Promise<InvestmentGroup[]> {
+    return Array.from(this.investmentGroups.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }
+
+  async getInvestmentGroup(id: number): Promise<InvestmentGroup | undefined> {
+    return this.investmentGroups.get(id);
+  }
+
+  async createInvestmentGroup(insertGroup: InsertInvestmentGroup): Promise<InvestmentGroup> {
+    const id = this.investmentGroupCurrentId++;
+    const group: InvestmentGroup = {
+      ...insertGroup,
+      id,
+      description: insertGroup.description ?? null,
+      createdAt: new Date(),
+    };
+    this.investmentGroups.set(id, group);
+    return group;
+  }
+
+  async updateInvestmentGroup(
+    id: number,
+    groupData: Partial<InsertInvestmentGroup>
+  ): Promise<InvestmentGroup | undefined> {
+    const group = this.investmentGroups.get(id);
+    if (!group) return undefined;
+
+    const updatedGroup = { ...group, ...groupData };
+    this.investmentGroups.set(id, updatedGroup);
+    return updatedGroup;
+  }
+
+  async deleteInvestmentGroup(id: number): Promise<boolean> {
+    const deleted = this.investmentGroups.delete(id);
+    if (!deleted) return false;
+
+    this.investments.forEach(investment => {
+      if (investment.groupId === id) {
+        this.investments.set(investment.id, {
+          ...investment,
+          groupId: null,
+        });
+      }
+    });
+
+    return true;
+  }
+
   async getInvestments(): Promise<Investment[]> {
     return Array.from(this.investments.values());
   }
@@ -357,6 +413,7 @@ export class MemoryStorage implements IStorage {
     const investment: Investment = {
       ...insertInvestment,
       id,
+      groupId: insertInvestment.groupId ?? null,
       accountId: insertInvestment.accountId ?? null,
       symbol: insertInvestment.symbol ?? null,
       institution: insertInvestment.institution ?? null,
@@ -385,11 +442,11 @@ export class MemoryStorage implements IStorage {
     const exists = this.investments.delete(id);
     if (!exists) return false;
 
-    for (const [contributionId, contribution] of this.investmentContributions.entries()) {
+    this.investmentContributions.forEach((contribution, contributionId) => {
       if (contribution.investmentId === id) {
         this.investmentContributions.delete(contributionId);
       }
-    }
+    });
     return true;
   }
 

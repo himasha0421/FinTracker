@@ -2,9 +2,12 @@ import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '@/services/apiClient';
 import type {
   CreateContributionPayload,
+  CreateInvestmentGroupPayload,
   CreateInvestmentPayload,
   UpdateContributionPayload,
+  UpdateInvestmentGroupPayload,
   UpdateInvestmentPayload,
+  InvestmentGroupItem,
   InvestmentItem,
   InvestmentContributionItem,
 } from './types';
@@ -12,6 +15,11 @@ import type {
 export const investmentKeys = {
   all: ['investments'] as const,
   detail: (id: number) => ['investments', id] as const,
+};
+
+export const investmentGroupKeys = {
+  all: ['investment-groups'] as const,
+  detail: (id: number) => ['investment-groups', id] as const,
 };
 
 export const investmentContributionKeys = {
@@ -32,6 +40,20 @@ export function investmentDetailQuery(id: number) {
   return queryOptions<InvestmentItem>({
     queryKey: investmentKeys.detail(id),
     queryFn: () => apiClient<InvestmentItem>(`/api/investments/${id}`),
+  });
+}
+
+export function investmentGroupsListQuery() {
+  return queryOptions<InvestmentGroupItem[]>({
+    queryKey: investmentGroupKeys.all,
+    queryFn: () => apiClient<InvestmentGroupItem[]>('/api/investment-groups'),
+  });
+}
+
+export function investmentGroupDetailQuery(id: number) {
+  return queryOptions<InvestmentGroupItem>({
+    queryKey: investmentGroupKeys.detail(id),
+    queryFn: () => apiClient<InvestmentGroupItem>(`/api/investment-groups/${id}`),
   });
 }
 
@@ -59,6 +81,21 @@ export function updateInvestment(id: number, data: UpdateInvestmentPayload) {
 
 export function deleteInvestment(id: number) {
   return apiClient<void>(`/api/investments/${id}`, { method: 'DELETE' });
+}
+
+export function createInvestmentGroup(data: CreateInvestmentGroupPayload) {
+  return apiClient<InvestmentGroupItem>('/api/investment-groups', { method: 'POST', data });
+}
+
+export function updateInvestmentGroup(id: number, data: UpdateInvestmentGroupPayload) {
+  return apiClient<InvestmentGroupItem>(`/api/investment-groups/${id}`, {
+    method: 'PATCH',
+    data,
+  });
+}
+
+export function deleteInvestmentGroup(id: number) {
+  return apiClient<void>(`/api/investment-groups/${id}`, { method: 'DELETE' });
 }
 
 export function createInvestmentContribution(data: CreateContributionPayload) {
