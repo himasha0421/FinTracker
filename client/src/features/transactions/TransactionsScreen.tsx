@@ -44,7 +44,8 @@ type TransactionRowProps = {
 };
 
 function formatDate(date: Date | string) {
-  return new Date(date).toLocaleDateString('en-US', {
+  const d = typeof date === 'string' ? new Date(date + (date.includes('T') ? '' : 'T00:00:00')) : date;
+  return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -59,7 +60,7 @@ const formatCategoryLabel = (transaction: TransactionWithAssignments) => {
 };
 
 const normalizeDateValue = (date: Date | string) => {
-  const normalized = new Date(date);
+  const normalized = typeof date === 'string' ? new Date(date + (date.includes('T') ? '' : 'T00:00:00')) : new Date(date);
   normalized.setHours(0, 0, 0, 0);
   return normalized.getTime();
 };

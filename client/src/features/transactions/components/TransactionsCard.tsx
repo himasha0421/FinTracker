@@ -24,7 +24,7 @@ type TransactionItemProps = {
 };
 
 function formatDate(date: Date | string) {
-  const txDate = typeof date === 'string' ? new Date(date) : date;
+  const txDate = typeof date === 'string' ? new Date(date + (date.includes('T') ? '' : 'T00:00:00')) : date;
   const now = new Date();
 
   const isToday = txDate.toDateString() === now.toDateString();

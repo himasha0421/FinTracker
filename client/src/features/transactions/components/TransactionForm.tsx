@@ -59,18 +59,14 @@ export default function TransactionForm({
   // Fetch accounts for the account selection
   const { data: accounts = [] } = useQuery(accountsListQuery());
 
-  // Format date for form default value with CST timezone adjustment
+  // Format date for form default value, using UTC parts to avoid timezone shift
   const formatDateForInput = (date: string | Date) => {
-    // Create a new Date object
     const d = typeof date === 'string' ? new Date(date) : date;
 
-    // Get date parts in CST timezone by creating a date with explicit parts
-    // This ensures we're working with the actual date the user wants
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
 
-    // Return a date string in YYYY-MM-DD format
     return `${year}-${month}-${day}`;
   };
 
@@ -138,10 +134,8 @@ export default function TransactionForm({
     });
 
   const onSubmit = async (data: TransactionFormValues) => {
-    // Make sure the date string is in YYYY-MM-DD format for consistent server-side parsing
-    const dateStr = data.date
-      ? formatDateForInput(new Date(data.date))
-      : formatDateForInput(new Date());
+    // Keep the YYYY-MM-DD string as-is for consistent server-side parsing
+    const dateStr = data.date || formatDateForInput(new Date());
 
     // Prepare the data with proper type handling
     const formattedData: CreateTransactionPayload = {

@@ -61,7 +61,7 @@ export default function TransactionFormDetailsFields({ form }: TransactionFormDe
                   <FormControl>
                     <Button variant="outline" className="w-full flex justify-between font-normal">
                       {field.value ? (
-                        format(new Date(field.value), 'MMMM do, yyyy')
+                        format(new Date(field.value + 'T00:00:00'), 'MMMM do, yyyy')
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -72,8 +72,8 @@ export default function TransactionFormDetailsFields({ form }: TransactionFormDe
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={field.value ? new Date(field.value) : undefined}
-                    defaultMonth={field.value ? new Date(field.value) : undefined}
+                    selected={field.value ? new Date(field.value + 'T00:00:00') : undefined}
+                    defaultMonth={field.value ? new Date(field.value + 'T00:00:00') : undefined}
                     modifiersClassNames={{
                       selected: 'bg-primary text-primary-foreground',
                       today: 'bg-accent text-accent-foreground',
