@@ -52,6 +52,7 @@ export const subcategoryOptionsByCategory: Record<string, { value: string; label
     { value: 'Insurance', label: 'Insurance' },
     { value: 'Parking', label: 'Parking' },
     { value: 'Public Transit', label: 'Public Transit' },
+    { value: 'Loan', label: 'Loan' },
     { value: 'Extra', label: 'Extra' },
   ],
   Groceries: [
