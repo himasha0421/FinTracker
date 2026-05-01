@@ -29,6 +29,12 @@ import {
   users,
   financialGoalAccounts,
   InsertFinancialGoalAccount,
+  TaxPlan,
+  InsertTaxPlan,
+  TaxPlanScenario,
+  InsertTaxPlanScenario,
+  taxPlans,
+  taxPlanScenarios,
 } from '@shared/schema';
 import { IStorage } from './types';
 
@@ -113,7 +119,7 @@ export class PostgresStorage implements IStorage {
   }
 
   private async replaceAssignments(
-    tx: typeof db,
+    tx: any,
     transactionId: number,
     assignments: TransactionAssignmentInput[]
   ): Promise<TransactionAssignment[]> {
@@ -464,11 +470,14 @@ export class PostgresStorage implements IStorage {
   async getInvestmentContributions(
     investmentId?: number
   ): Promise<InvestmentContribution[]> {
-    let query = db.select().from(investmentContributions);
     if (investmentId !== undefined) {
-      query = query.where(eq(investmentContributions.investmentId, investmentId));
+      return db
+        .select()
+        .from(investmentContributions)
+        .where(eq(investmentContributions.investmentId, investmentId))
+        .orderBy(desc(investmentContributions.date));
     }
-    return query.orderBy(desc(investmentContributions.date));
+    return db.select().from(investmentContributions).orderBy(desc(investmentContributions.date));
   }
 
   async getInvestmentContribution(id: number): Promise<InvestmentContribution | undefined> {
@@ -506,6 +515,78 @@ export class PostgresStorage implements IStorage {
     const result = await db
       .delete(investmentContributions)
       .where(eq(investmentContributions.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getTaxPlans(): Promise<TaxPlan[]> {
+    return db.select().from(taxPlans).orderBy(desc(taxPlans.updatedAt));
+  }
+
+  async getTaxPlan(id: number): Promise<TaxPlan | undefined> {
+    const result = await db.select().from(taxPlans).where(eq(taxPlans.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createTaxPlan(insertPlan: InsertTaxPlan): Promise<TaxPlan> {
+    const result = await db.insert(taxPlans).values(insertPlan).returning();
+    return result[0];
+  }
+
+  async updateTaxPlan(id: number, planData: Partial<InsertTaxPlan>): Promise<TaxPlan | undefined> {
+    const result = await db
+      .update(taxPlans)
+      .set({ ...planData, updatedAt: new Date() })
+      .where(eq(taxPlans.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTaxPlan(id: number): Promise<boolean> {
+    const result = await db.delete(taxPlans).where(eq(taxPlans.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getTaxPlanScenarios(planId: number): Promise<TaxPlanScenario[]> {
+    return db
+      .select()
+      .from(taxPlanScenarios)
+      .where(eq(taxPlanScenarios.planId, planId))
+      .orderBy(taxPlanScenarios.id);
+  }
+
+  async getTaxPlanScenario(id: number): Promise<TaxPlanScenario | undefined> {
+    const result = await db
+      .select()
+      .from(taxPlanScenarios)
+      .where(eq(taxPlanScenarios.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createTaxPlanScenario(
+    insertScenario: InsertTaxPlanScenario
+  ): Promise<TaxPlanScenario> {
+    const result = await db.insert(taxPlanScenarios).values(insertScenario).returning();
+    return result[0];
+  }
+
+  async updateTaxPlanScenario(
+    id: number,
+    scenarioData: Partial<InsertTaxPlanScenario>
+  ): Promise<TaxPlanScenario | undefined> {
+    const result = await db
+      .update(taxPlanScenarios)
+      .set({ ...scenarioData, updatedAt: new Date() })
+      .where(eq(taxPlanScenarios.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTaxPlanScenario(id: number): Promise<boolean> {
+    const result = await db
+      .delete(taxPlanScenarios)
+      .where(eq(taxPlanScenarios.id, id))
       .returning();
     return result.length > 0;
   }
@@ -561,7 +642,7 @@ export class PostgresStorage implements IStorage {
   }
 
   private async setGoalAccounts(
-    tx: typeof db,
+    tx: any,
     goalId: number,
     linkedAccountIds?: number[]
   ): Promise<void> {

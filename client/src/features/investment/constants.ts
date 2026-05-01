@@ -47,6 +47,8 @@ export const assetTypeGroups = [
   },
 ] as const;
 
-export const assetTypeSet = new Set(assetTypeGroups.flatMap(group => group.types));
+export const assetTypeSet: ReadonlySet<string> = new Set(
+  assetTypeGroups.flatMap(group => [...group.types])
+);
 
-export const contributionAssetTypeSet = new Set(['land', 'car']);
+export const contributionAssetTypeSet: ReadonlySet<string> = new Set(['land', 'car']);

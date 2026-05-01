@@ -8,6 +8,7 @@ import {
   Pencil,
   DollarSign,
   MessageCircle,
+  Calculator,
 } from 'lucide-react';
 
 type NavItemProps = {
@@ -43,6 +44,7 @@ export default function Sidebar() {
     { href: '/transactions', icon: <FileText size={18} />, label: 'Transactions' },
     { href: '/insights', icon: <BarChart2 size={18} />, label: 'Insights' },
     { href: '/investment', icon: <DollarSign size={18} />, label: 'Investment' },
+    { href: '/tax-planning', icon: <Calculator size={18} />, label: 'Tax Planning' },
     { href: '/recommendations', icon: <MessageSquare size={18} />, label: 'Recommendations' },
     { href: '/notes', icon: <Pencil size={18} />, label: 'Notes' },
     { href: '/chat', icon: <MessageCircle size={18} />, label: 'AI Assistant' },

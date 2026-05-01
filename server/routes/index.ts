@@ -3,6 +3,7 @@ import { AccountService } from '../services/accountService';
 import { TransactionService } from '../services/transactionService';
 import { GoalService } from '../services/goalService';
 import { InvestmentService } from '../services/investmentService';
+import { TaxPlanService } from '../services/taxPlanService';
 import { storage } from '../storage';
 import { createAccountsRouter } from './accounts';
 import { createTransactionsRouter } from './transactions';
@@ -10,6 +11,7 @@ import { createGoalsRouter } from './goals';
 import { createInvestmentsRouter } from './investments';
 import { createInvestmentContributionsRouter } from './investmentContributions';
 import { createInvestmentGroupsRouter } from './investmentGroups';
+import { createTaxPlansRouter } from './taxPlans';
 import { wrap } from './utils';
 import { HttpError } from '../errors';
 
@@ -20,6 +22,7 @@ export function createApiRouter() {
   const transactionService = new TransactionService(storage);
   const goalService = new GoalService(storage);
   const investmentService = new InvestmentService(storage);
+  const taxPlanService = new TaxPlanService(storage);
 
   router.get(
     '/balance',
@@ -47,6 +50,7 @@ export function createApiRouter() {
     '/investment-contributions',
     createInvestmentContributionsRouter(investmentService)
   );
+  router.use('/tax-plans', createTaxPlansRouter(taxPlanService));
 
   router.use(
     '*',

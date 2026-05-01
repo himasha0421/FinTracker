@@ -17,6 +17,10 @@ import {
   InsertInvestmentGroup,
   InvestmentContribution,
   InsertInvestmentContribution,
+  TaxPlan,
+  InsertTaxPlan,
+  TaxPlanScenario,
+  InsertTaxPlanScenario,
 } from '@shared/schema';
 import { IStorage } from './types';
 
@@ -30,6 +34,8 @@ export class MemoryStorage implements IStorage {
   private investmentGroups: Map<number, InvestmentGroup>;
   private investments: Map<number, Investment>;
   private investmentContributions: Map<number, InvestmentContribution>;
+  private taxPlans: Map<number, TaxPlan>;
+  private taxPlanScenarios: Map<number, TaxPlanScenario>;
 
   private userCurrentId: number;
   private accountCurrentId: number;
@@ -38,6 +44,8 @@ export class MemoryStorage implements IStorage {
   private investmentGroupCurrentId: number;
   private investmentCurrentId: number;
   private investmentContributionCurrentId: number;
+  private taxPlanCurrentId: number;
+  private taxPlanScenarioCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -49,6 +57,8 @@ export class MemoryStorage implements IStorage {
     this.investmentGroups = new Map();
     this.investments = new Map();
     this.investmentContributions = new Map();
+    this.taxPlans = new Map();
+    this.taxPlanScenarios = new Map();
 
     this.userCurrentId = 1;
     this.accountCurrentId = 1;
@@ -57,6 +67,8 @@ export class MemoryStorage implements IStorage {
     this.investmentGroupCurrentId = 1;
     this.investmentCurrentId = 1;
     this.investmentContributionCurrentId = 1;
+    this.taxPlanCurrentId = 1;
+    this.taxPlanScenarioCurrentId = 1;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -492,6 +504,102 @@ export class MemoryStorage implements IStorage {
 
   async deleteInvestmentContribution(id: number): Promise<boolean> {
     return this.investmentContributions.delete(id);
+  }
+
+  async getTaxPlans(): Promise<TaxPlan[]> {
+    return Array.from(this.taxPlans.values()).sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }
+
+  async getTaxPlan(id: number): Promise<TaxPlan | undefined> {
+    return this.taxPlans.get(id);
+  }
+
+  async createTaxPlan(insertPlan: InsertTaxPlan): Promise<TaxPlan> {
+    const id = this.taxPlanCurrentId++;
+    const now = new Date();
+    const plan: TaxPlan = {
+      ...insertPlan,
+      id,
+      createdAt: now,
+      updatedAt: now,
+      taxYear: insertPlan.taxYear ?? 2026,
+      province: insertPlan.province ?? 'MB',
+    };
+    this.taxPlans.set(id, plan);
+    return plan;
+  }
+
+  async updateTaxPlan(id: number, planData: Partial<InsertTaxPlan>): Promise<TaxPlan | undefined> {
+    const plan = this.taxPlans.get(id);
+    if (!plan) return undefined;
+
+    const updatedPlan: TaxPlan = {
+      ...plan,
+      ...planData,
+      updatedAt: new Date(),
+    };
+    this.taxPlans.set(id, updatedPlan);
+    return updatedPlan;
+  }
+
+  async deleteTaxPlan(id: number): Promise<boolean> {
+    const deleted = this.taxPlans.delete(id);
+    if (!deleted) return false;
+
+    this.taxPlanScenarios.forEach((scenario, scenarioId) => {
+      if (scenario.planId === id) {
+        this.taxPlanScenarios.delete(scenarioId);
+      }
+    });
+    return true;
+  }
+
+  async getTaxPlanScenarios(planId: number): Promise<TaxPlanScenario[]> {
+    return Array.from(this.taxPlanScenarios.values())
+      .filter(scenario => scenario.planId === planId)
+      .sort((a, b) => a.id - b.id);
+  }
+
+  async getTaxPlanScenario(id: number): Promise<TaxPlanScenario | undefined> {
+    return this.taxPlanScenarios.get(id);
+  }
+
+  async createTaxPlanScenario(
+    insertScenario: InsertTaxPlanScenario
+  ): Promise<TaxPlanScenario> {
+    const id = this.taxPlanScenarioCurrentId++;
+    const now = new Date();
+    const scenario: TaxPlanScenario = {
+      ...insertScenario,
+      id,
+      createdAt: now,
+      updatedAt: now,
+      overrides: insertScenario.overrides ?? null,
+    };
+    this.taxPlanScenarios.set(id, scenario);
+    return scenario;
+  }
+
+  async updateTaxPlanScenario(
+    id: number,
+    scenarioData: Partial<InsertTaxPlanScenario>
+  ): Promise<TaxPlanScenario | undefined> {
+    const scenario = this.taxPlanScenarios.get(id);
+    if (!scenario) return undefined;
+
+    const updatedScenario: TaxPlanScenario = {
+      ...scenario,
+      ...scenarioData,
+      updatedAt: new Date(),
+    };
+    this.taxPlanScenarios.set(id, updatedScenario);
+    return updatedScenario;
+  }
+
+  async deleteTaxPlanScenario(id: number): Promise<boolean> {
+    return this.taxPlanScenarios.delete(id);
   }
 
   private deriveGoalStatus(currentAmount: string, targetAmount: string) {

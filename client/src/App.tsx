@@ -11,6 +11,7 @@ import Recommendations from '@/pages/recommendations';
 import Notes from '@/pages/notes';
 import Investment from '@/pages/investment';
 import ChatPage from '@/pages/ChatPage';
+import TaxPlanning from '@/pages/tax-planning';
 import { FinanceProvider } from './lib/context';
 
 function Router() {
@@ -25,6 +26,7 @@ function Router() {
           <Route path="/recommendations" component={Recommendations} />
           <Route path="/notes" component={Notes} />
           <Route path="/investment" component={Investment} />
+          <Route path="/tax-planning" component={TaxPlanning} />
           <Route path="/chat" component={ChatPage} />
           <Route component={NotFound} />
         </Switch>

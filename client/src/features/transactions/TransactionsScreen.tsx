@@ -145,7 +145,7 @@ export default function TransactionsScreen() {
     setIsTransactionFormOpen(true);
   };
 
-  const handleEditTransaction = (transaction: Transaction) => {
+  const handleEditTransaction = (transaction: TransactionWithAssignments) => {
     setEditingTransaction(transaction);
     setIsTransactionFormOpen(true);
   };

@@ -99,7 +99,7 @@ export default function InvestmentAssets({
     <div className="space-y-8">
       {assetTypeGroups.map(group => {
         const groupInvestments = investments.filter(investment =>
-          group.types.includes(investment.type)
+          (group.types as readonly string[]).includes(investment.type)
         );
 
         return (

@@ -52,8 +52,10 @@ export const ASSET_TYPE_GROUPS = [
   },
 ] as const;
 
-const ASSET_TYPE_SET = new Set(ASSET_TYPE_GROUPS.flatMap(group => group.types));
-const CONTRIBUTION_ASSET_TYPE_SET = new Set(['land', 'car']);
+const ASSET_TYPE_SET: ReadonlySet<string> = new Set(
+  ASSET_TYPE_GROUPS.flatMap(group => [...group.types])
+);
+const CONTRIBUTION_ASSET_TYPE_SET: ReadonlySet<string> = new Set(['land', 'car']);
 
 export function isAssetType(type: string): boolean {
   return ASSET_TYPE_SET.has(type);

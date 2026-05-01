@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/himasha.jayawardena/Desktop/Laivly-Dev/Tools/dify/docker/**)",
+      "Bash(docker compose:*)",
+      "Bash(docker network:*)",
+      "Bash(docker rm:*)"
+    ]
+  }
+}

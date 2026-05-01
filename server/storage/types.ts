@@ -17,6 +17,10 @@ import {
   InsertInvestmentGroup,
   InvestmentContribution,
   InsertInvestmentContribution,
+  TaxPlan,
+  InsertTaxPlan,
+  TaxPlanScenario,
+  InsertTaxPlanScenario,
 } from '@shared/schema';
 
 export interface IStorage {
@@ -85,4 +89,19 @@ export interface IStorage {
     contribution: Partial<InsertInvestmentContribution>
   ): Promise<InvestmentContribution | undefined>;
   deleteInvestmentContribution(id: number): Promise<boolean>;
+
+  getTaxPlans(): Promise<TaxPlan[]>;
+  getTaxPlan(id: number): Promise<TaxPlan | undefined>;
+  createTaxPlan(plan: InsertTaxPlan): Promise<TaxPlan>;
+  updateTaxPlan(id: number, plan: Partial<InsertTaxPlan>): Promise<TaxPlan | undefined>;
+  deleteTaxPlan(id: number): Promise<boolean>;
+
+  getTaxPlanScenarios(planId: number): Promise<TaxPlanScenario[]>;
+  getTaxPlanScenario(id: number): Promise<TaxPlanScenario | undefined>;
+  createTaxPlanScenario(scenario: InsertTaxPlanScenario): Promise<TaxPlanScenario>;
+  updateTaxPlanScenario(
+    id: number,
+    scenario: Partial<InsertTaxPlanScenario>
+  ): Promise<TaxPlanScenario | undefined>;
+  deleteTaxPlanScenario(id: number): Promise<boolean>;
 }

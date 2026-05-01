@@ -216,3 +216,4 @@ ai_backend/venv
 .env
 ai_backend/.env
 mock-design/*
+commands/*

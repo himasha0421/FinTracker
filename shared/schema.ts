@@ -1,6 +1,11 @@
-import { pgTable, text, serial, integer, decimal, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, serial, integer, decimal, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import type {
+  TaxHouseholdInput,
+  TaxPersonInput,
+  TaxScenarioOverrides,
+} from './taxPlanning';
 
 // Account table
 export const accounts = pgTable('accounts', {
@@ -153,3 +158,43 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const taxPlans = pgTable('tax_plans', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  taxYear: integer('tax_year').default(2026).notNull(),
+  province: text('province').default('MB').notNull(),
+  household: jsonb('household').$type<TaxHouseholdInput>().notNull(),
+  personA: jsonb('person_a').$type<TaxPersonInput>().notNull(),
+  personB: jsonb('person_b').$type<TaxPersonInput>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const taxPlanScenarios = pgTable('tax_plan_scenarios', {
+  id: serial('id').primaryKey(),
+  planId: integer('plan_id')
+    .references(() => taxPlans.id, { onDelete: 'cascade' })
+    .notNull(),
+  name: text('name').notNull(),
+  mode: text('mode').notNull(),
+  overrides: jsonb('overrides').$type<TaxScenarioOverrides | null>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const insertTaxPlanSchema = createInsertSchema(taxPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const insertTaxPlanScenarioSchema = createInsertSchema(taxPlanScenarios).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTaxPlan = typeof taxPlans.$inferInsert;
+export type TaxPlan = typeof taxPlans.$inferSelect;
+export type InsertTaxPlanScenario = typeof taxPlanScenarios.$inferInsert;
+export type TaxPlanScenario = typeof taxPlanScenarios.$inferSelect;

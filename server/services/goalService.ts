@@ -6,8 +6,8 @@ function normalizeGoalPayload(payload: any) {
   let linkedAccountIds: number[] | undefined;
   if (Array.isArray(data.linkedAccountIds)) {
     linkedAccountIds = data.linkedAccountIds
-      .map((value: any) => Number(value))
-      .filter(value => !Number.isNaN(value));
+      .map((value: unknown) => Number(value))
+      .filter((value: number) => !Number.isNaN(value));
   }
   delete data.linkedAccountIds;
 
