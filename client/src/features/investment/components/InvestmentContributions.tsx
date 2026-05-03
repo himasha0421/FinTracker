@@ -73,13 +73,13 @@ function ContributionRow({ contribution, currency, onEdit }: ContributionRowProp
     <div className="flex items-center justify-between gap-2 px-4 py-2.5">
       <div className="flex items-center gap-2 min-w-0">
         <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', isDeposit ? 'bg-emerald-500' : 'bg-rose-400')} />
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-slate-300">
           {new Date(contribution.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
         </span>
-        <span className="truncate text-xs text-slate-400">{formatTypeLabel(contribution.type)}</span>
+        <span className="truncate text-xs text-slate-300">{formatTypeLabel(contribution.type)}</span>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <span className={cn('font-mono text-xs font-semibold', isDeposit ? 'text-emerald-600' : 'text-rose-600')}>
+        <span className={cn('font-mono text-xs font-semibold', isDeposit ? 'text-emerald-400' : 'text-rose-400')}>
           {isDeposit ? '+' : ''}{formatCurrency(signed, currency)}
         </span>
         <Button
@@ -108,15 +108,15 @@ function InvestmentSubCard({ investment, total, items, onEditContribution }: Inv
     <SectionCard radius="md">
       <div className={cn(sectionCardHeader(), 'flex items-center justify-between px-4 py-2.5')}>
         <div className="min-w-0">
-          <div className="truncate text-xs font-semibold text-slate-900">
+          <div className="truncate text-sm font-bold text-white">
             {investment?.name || `Investment #${items[0].investmentId}`}
           </div>
-          <div className="text-[11px] text-slate-400">
+          <div className="text-[11px] text-slate-300">
             {investment ? formatTypeLabel(investment.type) : ''}
             {investment?.symbol ? ` • ${investment.symbol}` : ''}
           </div>
         </div>
-        <div className={cn('ml-3 shrink-0 text-xs font-semibold', total >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
+        <div className={cn('ml-3 shrink-0 text-xs font-semibold', total >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
           {total >= 0 ? '+' : ''}{formatCurrency(total, currency)}
         </div>
       </div>
@@ -284,29 +284,29 @@ export default function InvestmentContributions({
 
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400">Net</div>
+                <div className="text-xs uppercase tracking-wide text-slate-300">Net</div>
                 <div className={cn('mt-1 text-lg font-semibold', stats.net >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                   {formatCurrency(stats.net)}
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400">Total Deposited</div>
+                <div className="text-xs uppercase tracking-wide text-slate-300">Total Deposited</div>
                 <div className="mt-1 text-lg font-semibold text-emerald-400">
                   {formatCurrency(stats.totalDeposited)}
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400">Total Withdrawn</div>
+                <div className="text-xs uppercase tracking-wide text-slate-300">Total Withdrawn</div>
                 <div className="mt-1 text-lg font-semibold text-rose-400">
                   {formatCurrency(stats.totalWithdrawn)}
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="flex items-center gap-1 text-xs uppercase tracking-wide text-slate-400">
+                <div className="flex items-center gap-1 text-xs uppercase tracking-wide text-slate-300">
                   <TrendingUp className="h-3 w-3" />
                   This Month
                 </div>
-                <div className={cn('mt-1 text-lg font-semibold', stats.thisMonth >= 0 ? 'text-slate-50' : 'text-rose-400')}>
+                <div className={cn('mt-1 text-lg font-semibold', stats.thisMonth >= 0 ? 'text-white' : 'text-rose-400')}>
                   {stats.thisMonth >= 0 ? '+' : ''}{formatCurrency(stats.thisMonth)}
                 </div>
               </div>
@@ -314,7 +314,7 @@ export default function InvestmentContributions({
 
             {/* Monthly chart */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="mb-3 text-xs uppercase tracking-[0.22em] text-slate-400">
+              <div className="mb-3 text-xs uppercase tracking-[0.22em] text-slate-300">
                 Monthly flow — last 12 months
               </div>
               <div className="h-[160px]">
@@ -384,14 +384,14 @@ export default function InvestmentContributions({
                 >
                   <div className="flex items-center gap-2">
                     {isCollapsed ? (
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                      <ChevronRight className="h-4 w-4 text-slate-300" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                      <ChevronDown className="h-4 w-4 text-slate-300" />
                     )}
-                    <span className="text-sm font-semibold text-slate-700">{label}</span>
-                    <span className="text-xs text-slate-400">{investments.length} investment{investments.length === 1 ? '' : 's'}</span>
+                    <span className="text-base font-bold text-white">{label}</span>
+                    <span className="text-xs text-slate-300">{investments.length} investment{investments.length === 1 ? '' : 's'}</span>
                   </div>
-                  <span className={cn('text-sm font-semibold', monthTotal >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                  <span className={cn('text-sm font-semibold', monthTotal >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                     {monthTotal >= 0 ? '+' : ''}{formatCurrency(monthTotal)}
                   </span>
                 </button>

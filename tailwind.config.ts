@@ -55,6 +55,9 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        surfaceDark: 'hsl(222 16% 16%)',  /* transaction icon bg */
+        positive:    '#22c55e',            /* income green */
+        negative:    '#f87171',            /* expense red */
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',

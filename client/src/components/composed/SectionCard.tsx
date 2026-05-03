@@ -1,5 +1,6 @@
-import { type ComponentPropsWithoutRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+export { CardContent as SectionCardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { sectionCard, sectionCardHeader, type SectionCardVariants } from '@/design/variants';
 
@@ -18,7 +19,7 @@ export function SectionCard({
 }: SectionCardProps) {
   return (
     <Card
-      className={cn(sectionCard({ radius, hover: hover ? 'true' : 'false' }), className)}
+      className={cn(sectionCard({ radius, hover }), className)}
       {...rest}
     >
       {children}
@@ -28,21 +29,29 @@ export function SectionCard({
 
 type SectionCardHeaderProps = ComponentPropsWithoutRef<typeof CardHeader> & {
   title: string;
+  titleClassName?: string;
+  action?: ReactNode;
   className?: string;
 };
 
 export function SectionCardHeader({
   title,
+  titleClassName,
+  action,
   className,
   children,
   ...rest
 }: SectionCardHeaderProps) {
   return (
     <CardHeader className={cn(sectionCardHeader(), className, 'p-5')} {...rest}>
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      {(title || action) && (
+        <div className="flex items-center justify-between gap-3">
+          {title && <CardTitle className={cn('text-lg font-bold', titleClassName)}>{title}</CardTitle>}
+          {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
+        </div>
+      )}
       {children}
     </CardHeader>
   );
 }
 
-export { CardContent as SectionCardContent };

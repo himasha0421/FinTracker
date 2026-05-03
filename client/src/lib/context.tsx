@@ -431,6 +431,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     try {
       await createInvestmentContribution(data);
       await queryClient.invalidateQueries({ queryKey: investmentContributionKeys.all });
+      await queryClient.invalidateQueries({ queryKey: investmentKeys.all });
       toast({
         title: 'Success',
         description: 'Contribution added successfully',
@@ -454,6 +455,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     try {
       await updateInvestmentContributionApi(id, data);
       await queryClient.invalidateQueries({ queryKey: investmentContributionKeys.all });
+      await queryClient.invalidateQueries({ queryKey: investmentKeys.all });
       toast({
         title: 'Success',
         description: 'Contribution updated successfully',
@@ -474,6 +476,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     try {
       await deleteInvestmentContributionApi(id);
       await queryClient.invalidateQueries({ queryKey: investmentContributionKeys.all });
+      await queryClient.invalidateQueries({ queryKey: investmentKeys.all });
       toast({
         title: 'Success',
         description: 'Contribution deleted successfully',

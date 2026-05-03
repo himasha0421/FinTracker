@@ -93,8 +93,8 @@ const TransactionRow = ({ transaction, onEdit }: TransactionRowProps) => {
           </div>
         </div>
       </td>
-      <td className="p-3 text-muted-foreground"> {formatDate(transaction.date)} </td>
-      <td className="p-3 text-muted-foreground">
+      <td className="p-3 text-foreground"> {formatDate(transaction.date)} </td>
+      <td className="p-3 text-foreground">
         <div className="space-y-1">
           {transaction.assignments && transaction.assignments.length > 0 ? (
             transaction.assignments.map(assignment => {

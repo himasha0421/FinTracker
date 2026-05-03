@@ -49,11 +49,12 @@ export default function InvestmentAssets({
       <SectionCard key={investment.id} radius="md">
         <SectionCardHeader
           title={investment.name}
+          titleClassName="text-base font-bold"
           className="space-y-3"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="mt-1 text-xs text-slate-500">
+              <div className="mt-1 text-xs text-slate-300">
                 {formatTypeLabel(investment.type)}
                 {investment.symbol ? ` • ${investment.symbol}` : ''}
                 {investment.institution ? ` • ${investment.institution}` : ''}
@@ -78,11 +79,11 @@ export default function InvestmentAssets({
 
         <CardContent className="space-y-4 p-5">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-slate-950 p-3 text-slate-50">
-              <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+            <div className="rounded-2xl bg-slate-950 p-3 text-white">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-slate-300">
                 Current Value
               </div>
-              <div className="mt-2 text-lg font-semibold">
+              <div className="mt-2 text-lg font-semibold text-white">
                 {formatCurrency(currentValue, currency)}
               </div>
             </div>

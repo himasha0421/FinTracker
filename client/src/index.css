@@ -3,6 +3,56 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* ── Dark neutral palette (slate family) ───────────────────── */
+    --background:        222 20% 10%;   /* slate-950 */
+    --foreground:        213 31% 91%;   /* slate-200 */
+
+    --card:              222 18% 13%;   /* slate-900 */
+    --card-foreground:   213 31% 91%;
+
+    --popover:           222 18% 13%;
+    --popover-foreground: 213 31% 91%;
+
+    --primary:           213 94% 68%;   /* blue-400 */
+    --primary-foreground: 222 20% 10%;
+
+    --secondary:         222 16% 18%;   /* slate-800 */
+    --secondary-foreground: 213 31% 91%;
+
+    --muted:             222 16% 18%;
+    --muted-foreground:  215 20% 55%;   /* slate-400 */
+
+    --accent:            222 16% 20%;
+    --accent-foreground: 213 31% 91%;
+
+    --destructive:       0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border:            222 16% 20%;   /* slate-800 */
+    --input:             222 16% 20%;
+    --ring:              213 94% 68%;
+
+    --radius:            0.75rem;
+
+    /* ── Chart tokens ──────────────────────────────────────────── */
+    --chart-1: 221 83% 53%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 30 90% 55%;
+    --chart-4: 270 60% 65%;
+    --chart-5: 340 75% 55%;
+
+    /* ── Sidebar ───────────────────────────────────────────────── */
+    --sidebar-background:          222 20% 8%;
+    --sidebar-foreground:          213 31% 85%;
+    --sidebar-primary:             213 94% 68%;
+    --sidebar-primary-foreground:  222 20% 10%;
+    --sidebar-accent:              222 16% 14%;
+    --sidebar-accent-foreground:   213 31% 91%;
+    --sidebar-border:              222 16% 16%;
+    --sidebar-ring:                213 94% 68%;
+  }
+
   * {
     @apply border-border;
   }

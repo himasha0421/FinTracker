@@ -110,6 +110,13 @@ export const goalIconColourClasses: Record<string, string> = {
   red:    'bg-red-500 text-red-400',
 };
 
+// ─── Transaction amount colours (Tailwind) ───────────────────────────────────
+// Used for income (+) and expense (-) amounts in transaction lists.
+export const transactionColours = {
+  income:  'text-positive',
+  expense: 'text-negative',
+} as const;
+
 // ─── Chat UI colours (hex) ────────────────────────────────────────────────────
 export const chatColours = {
   surface:       '#1a1a1a',

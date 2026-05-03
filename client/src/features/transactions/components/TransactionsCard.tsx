@@ -1,91 +1,63 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight, Plus } from 'lucide-react';
 import { Link } from 'wouter';
+import { SectionCard, SectionCardHeader, SectionCardContent } from '@/components/composed/SectionCard';
+import { SkeletonListItem } from '@/components/composed/SkeletonListItem';
+import { EmptyState } from '@/components/composed/EmptyState';
 import type { TransactionWithAssignments } from '@/features/transactions/types';
-import { useState } from 'react';
 import TransactionForm from '@/features/transactions/components/TransactionForm';
 import { transactionsListQuery } from '@/features/transactions/api';
-import {
-  iconOptions,
-  resolveTransactionIconValue,
-  type IconValue,
-} from '@/features/transactions/constants';
+import { iconOptions, resolveTransactionIconValue, type IconValue } from '@/features/transactions/constants';
+import { transactionColours } from '@/design/tokens';
+import { formatCurrency } from '@/lib/formatters';
 
 const transactionIcons = iconOptions.reduce((acc, option) => {
   acc[option.value] = <option.Icon className="h-4 w-4 text-muted-foreground" />;
   return acc;
 }, {} as Record<IconValue, JSX.Element>);
 
-type TransactionItemProps = {
-  transaction: TransactionWithAssignments;
-};
-
-function formatDate(date: Date | string) {
-  const txDate = typeof date === 'string' ? new Date(date + (date.includes('T') ? '' : 'T00:00:00')) : date;
-  const now = new Date();
-
-  const isToday = txDate.toDateString() === now.toDateString();
-  const isYesterday =
-    new Date(now.setDate(now.getDate() - 1)).toDateString() === txDate.toDateString();
-
-  if (isToday) {
-    return 'Today';
-  } else if (isYesterday) {
-    return 'Yesterday';
-  } else {
-    return txDate.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  }
+function normaliseDate(date: Date | string): Date {
+  if (typeof date !== 'string') return date;
+  return new Date(date.includes('T') ? date : `${date}T00:00:00`);
 }
 
-const TransactionItem = ({ transaction }: TransactionItemProps) => {
+function formatDate(date: Date | string) {
+  const txDate = normaliseDate(date);
+  const now = new Date();
+  const isToday = txDate.toDateString() === now.toDateString();
+  const isYesterday = new Date(now.setDate(now.getDate() - 1)).toDateString() === txDate.toDateString();
+  if (isToday) return 'Today';
+  if (isYesterday) return 'Yesterday';
+  return txDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+const TransactionItem = ({ transaction }: { transaction: TransactionWithAssignments }) => {
   const iconKey = resolveTransactionIconValue(transaction);
   const splitSummary =
-    transaction.assignments && transaction.assignments.length > 0
-      ? transaction.assignments
-          .map(assignment => {
-            const percent = Number(assignment.sharePercent) || 0;
-            return `${assignment.assignee} ${percent.toFixed(0)}%`;
-          })
-          .join(' • ')
+    transaction.assignments?.length
+      ? transaction.assignments.map(a => `${a.assignee} ${(Number(a.sharePercent) || 0).toFixed(0)}%`).join(' • ')
       : 'Unassigned';
 
-  const formattedAmount = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number(transaction.amount));
-
   const isIncome = transaction.type === 'income';
-  const amountClass = isIncome ? 'text-positive' : 'text-negative';
-  const formattedPrefix = isIncome ? '+' : '-';
+  const amountClass = isIncome ? transactionColours.income : transactionColours.expense;
+  const prefix = isIncome ? '+' : '-';
 
   return (
     <div className="flex items-center justify-between py-2">
       <div className="flex items-center">
-        <div className="w-8 h-8 rounded-md bg-surfaceDark border border-border flex items-center justify-center mr-3">
+        <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surfaceDark">
           {transactionIcons[iconKey] || transactionIcons['shopping-bag']}
         </div>
         <div>
-          <h3 className="font-medium"> {transaction.description} </h3>
-          <p className="text-xs text-muted-foreground">
-            {formatDate(transaction.date)} · {splitSummary}
-          </p>
+          <h3 className="font-medium">{transaction.description}</h3>
+          <p className="text-xs text-muted-foreground">{formatDate(transaction.date)} · {splitSummary}</p>
         </div>
       </div>
-      <div className="text-right">
-        <span className={`font-medium ${amountClass} font-mono`}>
-          {isIncome ? formattedPrefix : ''}
-          {formattedAmount}
-        </span>
-      </div>
+      <span className={`font-mono font-medium ${amountClass}`}>
+        {prefix}{formatCurrency(Number(transaction.amount))}
+      </span>
     </div>
   );
 };
@@ -100,65 +72,45 @@ export default function TransactionsCard() {
     staleTime: 0,
   });
 
-  const handleAddTransaction = () => {
-    setIsTransactionFormOpen(true);
-  };
+  const countLabel = !isLoading && transactions ? `${transactions.length} transactions` : '';
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Recent Activity </CardTitle>
-          <div className="flex items-center gap-2">
-            <div className="text-sm text-muted-foreground">
-              {!isLoading && transactions ? `${transactions.length} transactions` : '...'}
-            </div>
-            <Button size="sm" variant="ghost" onClick={handleAddTransaction}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4 max-h-[420px] overflow-y-auto">
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="flex items-center justify-between py-2">
-                  <div className="flex items-center">
-                    <Skeleton className="w-8 h-8 rounded-md mr-3" />
-                    <div>
-                      <Skeleton className="h-4 w-24 mb-1" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-4 w-16" />
-                </div>
-              ))
-            ) : transactions && transactions.length > 0 ? (
-              transactions.map((transaction: TransactionWithAssignments) => (
-                <TransactionItem key={transaction.id} transaction={transaction} />
-              ))
-            ) : (
-              <div className="py-3 text-center text-muted-foreground">No transactions found.</div>
+      <SectionCard>
+        <SectionCardHeader
+          title="Recent Activity"
+          action={
+            <>
+              {countLabel && <span className="text-sm text-muted-foreground">{countLabel}</span>}
+              <Button size="sm" variant="ghost" onClick={() => setIsTransactionFormOpen(true)}>
+                <Plus className="mr-1 h-4 w-4" />
+                Add
+              </Button>
+            </>
+          }
+        />
+        <SectionCardContent className="p-5">
+          <div className="max-h-[420px] space-y-2 overflow-y-auto">
+            {isLoading && Array.from({ length: 5 }, (_, i) => <SkeletonListItem key={`skel-${i}`} />)}
+            {!isLoading && (!transactions || transactions.length === 0) && (
+              <EmptyState text="No transactions found." />
             )}
+            {!isLoading && transactions && transactions.length > 0 && transactions.map((tx: TransactionWithAssignments) => (
+              <TransactionItem key={tx.id} transaction={tx} />
+            ))}
           </div>
-        </CardContent>
-        <CardFooter>
+        </SectionCardContent>
+        <div className="px-5 pb-5">
           <Button className="w-full" variant="outline" asChild>
             <Link href="/transactions">
-              <div className="flex items-center justify-center w-full">
-                <span>View All Transactions </span>
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </div>
+              <span>View All Transactions</span>
+              <ChevronRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </SectionCard>
 
-      <TransactionForm
-        isOpen={isTransactionFormOpen}
-        onClose={() => setIsTransactionFormOpen(false)}
-      />
+      <TransactionForm isOpen={isTransactionFormOpen} onClose={() => setIsTransactionFormOpen(false)} />
     </>
   );
 }

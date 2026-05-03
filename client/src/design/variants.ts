@@ -35,7 +35,7 @@ export const glassTile = cva(
 );
 
 export const sectionCard = cva(
-  'overflow-hidden border-slate-200/80 bg-white/90 shadow-sm transition duration-200',
+  'overflow-hidden border border-border bg-card text-card-foreground shadow-sm transition duration-200',
   {
     variants: {
       radius: {
@@ -43,20 +43,19 @@ export const sectionCard = cva(
         lg: 'rounded-[28px]',
       },
       hover: {
-        true:  'hover:-translate-y-0.5 hover:shadow-lg',
+        true:  'hover:-translate-y-0.5 hover:shadow-lg hover:border-border/70',
         false: '',
       },
     },
     defaultVariants: {
       radius: 'md',
-      // String 'true' because CVA boolean variants use string keys, not JS booleans
-      hover: 'true',
+      hover: true,
     },
   },
 );
 
 export const sectionCardHeader = cva(
-  'border-b border-slate-100 bg-[linear-gradient(180deg,_rgba(248,250,252,0.96),_rgba(241,245,249,0.82))]',
+  'border-b border-border bg-[linear-gradient(180deg,_hsl(var(--card)),_hsl(var(--secondary)))]',
 );
 
 export const labelBadge = cva(

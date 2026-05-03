@@ -165,19 +165,58 @@ export class InvestmentService {
     return this.storage.getInvestmentContribution(id);
   }
 
-  createContribution(payload: unknown) {
+  async createContribution(payload: unknown) {
     const normalized = normalizeContributionPayload(payload);
     const data = insertInvestmentContributionSchema.parse(normalized);
-    return this.storage.createInvestmentContribution(data);
+    const contribution = await this.storage.createInvestmentContribution(data);
+
+    const investment = await this.storage.getInvestment(contribution.investmentId);
+    if (investment) {
+      const delta = contribution.type === 'withdrawal' ? -Number(contribution.amount) : Number(contribution.amount);
+      const newValue = (Number(investment.currentValue) + delta).toString();
+      await this.storage.updateInvestment(investment.id, { currentValue: newValue });
+    }
+
+    return contribution;
   }
 
-  updateContribution(id: number, payload: unknown) {
+  async updateContribution(id: number, payload: unknown) {
     const normalized = normalizeContributionPayload(payload);
     const data = insertInvestmentContributionSchema.partial().parse(normalized);
-    return this.storage.updateInvestmentContribution(id, data);
+
+    const old = await this.storage.getInvestmentContribution(id);
+    const contribution = await this.storage.updateInvestmentContribution(id, data);
+
+    if (old && contribution) {
+      const investmentId = contribution.investmentId ?? old.investmentId;
+      const investment = await this.storage.getInvestment(investmentId);
+      if (investment) {
+        const oldSigned = old.type === 'withdrawal' ? -Number(old.amount) : Number(old.amount);
+        const newSigned = contribution.type === 'withdrawal' ? -Number(contribution.amount) : Number(contribution.amount);
+        const diff = newSigned - oldSigned;
+        if (diff !== 0) {
+          const newValue = (Number(investment.currentValue) + diff).toString();
+          await this.storage.updateInvestment(investment.id, { currentValue: newValue });
+        }
+      }
+    }
+
+    return contribution;
   }
 
-  deleteContribution(id: number) {
-    return this.storage.deleteInvestmentContribution(id);
+  async deleteContribution(id: number) {
+    const old = await this.storage.getInvestmentContribution(id);
+    const result = await this.storage.deleteInvestmentContribution(id);
+
+    if (result && old) {
+      const investment = await this.storage.getInvestment(old.investmentId);
+      if (investment) {
+        const signed = old.type === 'withdrawal' ? -Number(old.amount) : Number(old.amount);
+        const newValue = (Number(investment.currentValue) - signed).toString();
+        await this.storage.updateInvestment(investment.id, { currentValue: newValue });
+      }
+    }
+
+    return result;
   }
 }

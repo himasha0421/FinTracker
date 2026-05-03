@@ -14,7 +14,7 @@ export default function DashboardScreen() {
   }, []);
 
   return (
-    <div>
+    <div className="space-y-6">
       <BalanceSummary />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -24,9 +24,7 @@ export default function DashboardScreen() {
 
       <FinancialGoals />
 
-      <div className="mt-6">
-        <CategoryBudgetPlannerCard />
-      </div>
+      <CategoryBudgetPlannerCard />
     </div>
   );
 }

@@ -539,7 +539,7 @@ export default function InvestmentHoldings({
                 )}
               >
                 <SectionCardHeader
-                  title={group.name}
+                  title=""
                   className="space-y-4 p-5"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -553,14 +553,14 @@ export default function InvestmentHoldings({
                           <FolderKanban className="h-3 w-3" />
                           Group
                         </div>
-                        <CardTitle className="mt-3 truncate text-xl text-slate-950 transition hover:text-sky-700">
+                        <CardTitle className="mt-3 truncate text-2xl font-bold text-white transition hover:text-sky-400">
                           {group.name}
                         </CardTitle>
-                        <CardDescription className="mt-1 line-clamp-2 text-slate-500">
+                        <CardDescription className="mt-1 line-clamp-2 text-slate-300">
                           {group.description ||
                             'Drop holdings here to build a more intentional strategy bucket.'}
                         </CardDescription>
-                        <div className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-sky-700">
+                        <div className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-sky-400">
                           Open group view
                         </div>
                       </button>
@@ -574,11 +574,11 @@ export default function InvestmentHoldings({
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl bg-slate-950 p-3 text-slate-50">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                    <div className="rounded-2xl bg-slate-950 p-3 text-white">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-300">
                         Net Value
                       </div>
-                      <div className="mt-2 text-base font-semibold">
+                      <div className="mt-2 text-base font-semibold text-white">
                         {formatCurrency(stats.totalNetValue)}
                       </div>
                     </div>
