@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { chartPaletteSummary } from '@/design/tokens';
 
 type SummaryData = {
   income: number;
@@ -42,9 +43,9 @@ export default function SummaryCard({ data, isLoading }: SummaryCardProps) {
                   wrapperStyle={{ outline: 'none' }}
                 />
                 <Legend />
-                <Bar dataKey="income" fill="#22c55e" name="Income" />
-                <Bar dataKey="expense" fill="#ef4444" name="Expenses" />
-                <Bar dataKey="savings" fill="#3b82f6" name="Savings" />
+                <Bar dataKey="income"  fill={chartPaletteSummary.income}  name="Income" />
+                <Bar dataKey="expense" fill={chartPaletteSummary.expense} name="Expenses" />
+                <Bar dataKey="savings" fill={chartPaletteSummary.savings} name="Savings" />
               </BarChart>
             </ResponsiveContainer>
           </div>

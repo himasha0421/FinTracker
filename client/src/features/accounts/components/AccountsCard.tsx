@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import AccountForm from '@/features/accounts/components/AccountForm';
 import type { Account } from '@shared/schema';
 import { accountsListQuery } from '@/features/accounts/api';
+import { entityColourClasses } from '@/design/tokens';
 
 const accountIcons: Record<string, JSX.Element> = {
   wallet: (
@@ -66,13 +67,6 @@ const accountIcons: Record<string, JSX.Element> = {
   car: <Car className="h-4 w-4" />,
 };
 
-const colorClasses: Record<string, string> = {
-  green: 'bg-green-500 bg-opacity-20 text-green-400',
-  blue: 'bg-blue-500 bg-opacity-20 text-blue-400',
-  purple: 'bg-purple-500 bg-opacity-20 text-purple-400',
-  red: 'bg-red-500 bg-opacity-20 text-red-400',
-  yellow: 'bg-yellow-500 bg-opacity-20 text-yellow-400',
-};
 
 type AccountItemProps = {
   account: Account;
@@ -99,7 +93,7 @@ const AccountItem = ({ account, onEdit }: AccountItemProps) => {
     <div className="flex items-center justify-between py-3 px-4 border-b border-border group">
       <div className="flex items-center">
         <div
-          className={`w-8 h-8 rounded-md ${colorClasses[colorKey] ?? colorClasses.green} flex items-center justify-center mr-3`}
+          className={`w-8 h-8 rounded-md ${entityColourClasses[colorKey] ?? entityColourClasses.green} flex items-center justify-center mr-3`}
         >
           {accountIcons[iconKey] || <div className="h-4 w-4" />}
         </div>

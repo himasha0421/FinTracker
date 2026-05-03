@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { HeroCard } from '@/components/composed/HeroCard';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -172,7 +173,7 @@ export default function RecommendationsScreen() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20">
+        <HeroCard accent="sky" contentClassName="space-y-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-200">
               <Lightbulb className="h-5 w-5" />
@@ -182,27 +183,25 @@ export default function RecommendationsScreen() {
               Quick wins to optimize your finances
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-3 text-blue-50">
-              <div className="h-2 w-2 rounded-full bg-blue-300" />
-              Automate transfers to savings after each paycheck
-            </div>
-            <div className="flex items-center gap-3 text-blue-50">
-              <div className="h-2 w-2 rounded-full bg-blue-300" />
-              Review subscriptions quarterly to remove unused services
-            </div>
-            <div className="flex items-center gap-3 text-blue-50">
-              <div className="h-2 w-2 rounded-full bg-blue-300" />
-              Set category budgets for food, entertainment, and shopping
-            </div>
-          </CardContent>
+          <div className="flex items-center gap-3 text-blue-50">
+            <div className="h-2 w-2 rounded-full bg-blue-300" />
+            Automate transfers to savings after each paycheck
+          </div>
+          <div className="flex items-center gap-3 text-blue-50">
+            <div className="h-2 w-2 rounded-full bg-blue-300" />
+            Review subscriptions quarterly to remove unused services
+          </div>
+          <div className="flex items-center gap-3 text-blue-50">
+            <div className="h-2 w-2 rounded-full bg-blue-300" />
+            Set category budgets for food, entertainment, and shopping
+          </div>
           <CardFooter>
             <Button variant="secondary" className="w-full">
               View Checklist
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardFooter>
-        </Card>
+        </HeroCard>
 
         <Card className="border-green-500/20">
           <CardHeader>

@@ -12,8 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import { ChevronDown } from 'lucide-react';
-
-const BAR_COLORS = ['#0f766e', '#f97316', '#2563eb', '#e11d48', '#22c55e', '#facc15'];
+import { chartPaletteAlt } from '@/design/tokens';
 
 type MonthlyCategorySpendCardProps = {
   monthlyData: Record<string, any>[];
@@ -106,7 +105,7 @@ export default function MonthlyCategorySpendCard({
                     key={category}
                     dataKey={category}
                     stackId="a"
-                    fill={BAR_COLORS[index % BAR_COLORS.length]}
+                    fill={chartPaletteAlt[index % chartPaletteAlt.length]}
                     radius={[4, 4, 0, 0]}
                   />
                 ))}

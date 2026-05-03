@@ -13,8 +13,7 @@ import {
 } from 'recharts';
 import type { TransactionWithAssignments } from '@/features/transactions/types';
 import WeekTransactions from './WeekTransactions';
-
-const LINE_COLORS = ['#2563eb', '#f97316', '#22c55e', '#a855f7', '#ef4444', '#14b8a6'];
+import { chartPaletteHex } from '@/design/tokens';
 
 type WeeklySpendCardProps = {
   weeklyData: Record<string, any>[];
@@ -107,7 +106,7 @@ export default function WeeklySpendCard({
                       key={category}
                       type="monotone"
                       dataKey={category}
-                      stroke={LINE_COLORS[index % LINE_COLORS.length]}
+                      stroke={chartPaletteHex[index % chartPaletteHex.length]}
                       strokeWidth={2}
                       dot={false}
                       connectNulls

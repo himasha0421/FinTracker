@@ -1,4 +1,4 @@
-import type { InvestmentContributionItem } from '@/features/investment/types';
+import type { InvestmentContributionItem, InvestmentItem } from '@/features/investment/types';
 
 export const allocationPalette = [
   '#22c55e',
@@ -35,9 +35,7 @@ export const formatCurrency = (value: number, currency = 'USD') => {
 };
 
 export const getSignedContributionAmount = (contribution: InvestmentContributionItem) =>
-  contribution.type === 'withdrawal'
-    ? -Number(contribution.amount)
-    : Number(contribution.amount);
+  contribution.type === 'withdrawal' ? -Number(contribution.amount) : Number(contribution.amount);
 
 export const buildMonthlyContributionSeries = (
   contributions: InvestmentContributionItem[],
@@ -62,4 +60,61 @@ export const buildMonthlyContributionSeries = (
     });
   }
   return points;
+};
+
+export const buildAllocationSlices = (investments: InvestmentItem[]) => {
+  const totals = new Map<
+    string,
+    {
+      type: string;
+      name: string;
+      value: number;
+      count: number;
+      monthlyContribution: number;
+      items: InvestmentItem[];
+    }
+  >();
+
+  investments.forEach(investment => {
+    const existing = totals.get(investment.type);
+    const value = Number(investment.currentValue || 0);
+    const monthlyContribution = Number(investment.monthlyContribution || 0);
+
+    if (existing) {
+      existing.value += value;
+      existing.count += 1;
+      existing.monthlyContribution += monthlyContribution;
+      existing.items.push(investment);
+      return;
+    }
+
+    totals.set(investment.type, {
+      type: investment.type,
+      name: formatTypeLabel(investment.type),
+      value,
+      count: 1,
+      monthlyContribution,
+      items: [investment],
+    });
+  });
+
+  return Array.from(totals.values())
+    .sort((left, right) => {
+      if (right.value !== left.value) {
+        return right.value - left.value;
+      }
+
+      if (right.monthlyContribution !== left.monthlyContribution) {
+        return right.monthlyContribution - left.monthlyContribution;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .map((item, index) => ({
+      ...item,
+      color: allocationPalette[index % allocationPalette.length],
+      items: [...item.items].sort(
+        (left, right) => Number(right.currentValue || 0) - Number(left.currentValue || 0)
+      ),
+    }));
 };

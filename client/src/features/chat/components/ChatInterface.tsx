@@ -1,5 +1,18 @@
 import React, { useRef, useEffect } from 'react';
 import type { ChatMessage } from '@/features/chat/types';
+import { chatColours } from '@/design/tokens';
+import { cn } from '@/lib/utils';
+
+// Tailwind arbitrary-value class strings derived from design tokens
+// (kept as full strings so Tailwind's static scanner can detect them at build time)
+const chatCls = {
+  surface:      `bg-[${chatColours.surface}]`,        // bg-[#1a1a1a]
+  surfaceRaised: `bg-[${chatColours.surfaceRaised}]`, // bg-[#2a2a2a]
+  border:       `border-[${chatColours.border}]`,     // border-[#333333]
+  accent:       `bg-[${chatColours.accent}]`,         // bg-[#2970ff]
+  focusBorder:  `focus:border-[${chatColours.accent}]`,
+  focusRing:    `focus:ring-[${chatColours.accent}]`,
+} as const;
 
 type ChatInterfaceProps = {
   messages: ChatMessage[];
@@ -41,8 +54,8 @@ export function ChatInterface({
   return (
     <div className="flex-1 bg-black h-[calc(100vh-180px)] overflow-hidden font-inter">
       <div className="h-full flex flex-col">
-        <div className="flex-1 mx-4 rounded-lg bg-[#1a1a1a] overflow-hidden flex flex-col">
-          <div className="bg-[#2a2a2a] p-2.5 text-center flex-shrink-0">
+        <div className={cn('flex-1 mx-4 rounded-lg overflow-hidden flex flex-col', chatCls.surface)}>
+          <div className={cn(chatCls.surfaceRaised, 'p-2.5 text-center flex-shrink-0')}>
             <h2 className="text-white text-xl font-medium"> What can I help with? </h2>
           </div>
 
@@ -54,7 +67,11 @@ export function ChatInterface({
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] ${message.role === 'assistant' ? 'bg-[#2a2a2a]' : 'bg-[#2970ff]'} rounded-xl px-4 py-2.5 ${message.role === 'assistant' ? 'text-gray-100' : 'text-white'}`}
+                    className={cn(
+                      'max-w-[80%] rounded-xl px-4 py-2.5',
+                      message.role === 'assistant' ? chatCls.surfaceRaised : chatCls.accent,
+                      message.role === 'assistant' ? 'text-gray-100' : 'text-white',
+                    )}
                   >
                     {message.file && (
                       <div className="mb-2">
@@ -93,7 +110,7 @@ export function ChatInterface({
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="max-w-[80%] bg-[#2a2a2a] rounded-xl px-4 py-2.5">
+                  <div className={cn('max-w-[80%] rounded-xl px-4 py-2.5', chatCls.surfaceRaised)}>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"> </div>
                       <div
@@ -116,7 +133,7 @@ export function ChatInterface({
             </div>
           </div>
 
-          <div className="border-t border-[#333333] p-2.5 flex-shrink-0">
+          <div className={cn('border-t p-2.5 flex-shrink-0', chatCls.border)}>
             <form onSubmit={onSubmit}>
               <div className="relative">
                 <input
@@ -124,7 +141,13 @@ export function ChatInterface({
                   value={input}
                   onChange={e => onInputChange(e.target.value)}
                   placeholder="Ask anything"
-                  className="w-full rounded-lg border border-[#333333] bg-[#2a2a2a] px-4 py-2.5 pr-20 text-base text-white placeholder-gray-400 focus:border-[#2970ff] focus:outline-none focus:ring-1 focus:ring-[#2970ff]"
+                  className={cn(
+                    'w-full rounded-lg border px-4 py-2.5 pr-20 text-base text-white placeholder-gray-400 focus:outline-none focus:ring-1',
+                    chatCls.border,
+                    chatCls.surfaceRaised,
+                    chatCls.focusBorder,
+                    chatCls.focusRing,
+                  )}
                   disabled={isLoading}
                 />
                 <div className="absolute right-2 top-2 flex space-x-1.5">

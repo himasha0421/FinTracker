@@ -17,9 +17,8 @@ import InvestmentContributions from '@/features/investment/components/Investment
 import InvestmentAssets from '@/features/investment/components/InvestmentAssets';
 import { assetTypeSet, contributionAssetTypeSet } from '@/features/investment/constants';
 import {
-  allocationPalette,
+  buildAllocationSlices,
   buildMonthlyContributionSeries,
-  formatTypeLabel,
   getSignedContributionAmount,
 } from '@/features/investment/utils';
 import { useFinance } from '@/lib/context';
@@ -29,14 +28,15 @@ export default function InvestmentScreen() {
   const [isInvestmentFormOpen, setIsInvestmentFormOpen] = useState(false);
   const [isContributionFormOpen, setIsContributionFormOpen] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<InvestmentItem | null>(null);
-  const [editingContribution, setEditingContribution] =
-    useState<InvestmentContributionItem | null>(null);
-  const [defaultContributionInvestmentId, setDefaultContributionInvestmentId] =
-    useState<number | undefined>(undefined);
-
-  const { data: investments = [], isLoading: isLoadingInvestments } = useQuery(
-    investmentsListQuery()
+  const [editingContribution, setEditingContribution] = useState<InvestmentContributionItem | null>(
+    null
   );
+  const [defaultContributionInvestmentId, setDefaultContributionInvestmentId] = useState<
+    number | undefined
+  >(undefined);
+
+  const { data: investments = [], isLoading: isLoadingInvestments } =
+    useQuery(investmentsListQuery());
   const { data: investmentGroups = [], isLoading: isLoadingGroups } = useQuery(
     investmentGroupsListQuery()
   );
@@ -58,17 +58,13 @@ export default function InvestmentScreen() {
   }, [investments]);
 
   const totalInvestmentValue = useMemo(
-    () =>
-      investments.reduce((sum, investment) => sum + Number(investment.currentValue || 0), 0),
+    () => investments.reduce((sum, investment) => sum + Number(investment.currentValue || 0), 0),
     [investments]
   );
 
   const totalMonthlyContribution = useMemo(
     () =>
-      investments.reduce(
-        (sum, investment) => sum + Number(investment.monthlyContribution || 0),
-        0
-      ),
+      investments.reduce((sum, investment) => sum + Number(investment.monthlyContribution || 0), 0),
     [investments]
   );
 
@@ -98,10 +94,7 @@ export default function InvestmentScreen() {
     const map = new Map<number, number>();
     contributions.forEach(contribution => {
       const signedAmount = getSignedContributionAmount(contribution);
-      map.set(
-        contribution.investmentId,
-        (map.get(contribution.investmentId) ?? 0) + signedAmount
-      );
+      map.set(contribution.investmentId, (map.get(contribution.investmentId) ?? 0) + signedAmount);
     });
     return map;
   }, [contributions]);
@@ -138,19 +131,7 @@ export default function InvestmentScreen() {
   const gainLossPercent =
     netContributions > 0 ? ((gainLoss / netContributions) * 100).toFixed(1) : null;
 
-  const allocationData = useMemo(() => {
-    const totals = new Map<string, number>();
-    investments.forEach(investment => {
-      const value = Number(investment.currentValue || 0);
-      totals.set(investment.type, (totals.get(investment.type) ?? 0) + value);
-    });
-
-    return Array.from(totals.entries()).map(([type, value], index) => ({
-      name: formatTypeLabel(type),
-      value,
-      color: allocationPalette[index % allocationPalette.length],
-    }));
-  }, [investments]);
+  const allocationData = useMemo(() => buildAllocationSlices(investments), [investments]);
 
   const totalAllocationValue = allocationData.reduce((sum, item) => sum + item.value, 0);
 
@@ -211,10 +192,7 @@ export default function InvestmentScreen() {
     });
   };
 
-  const handleMoveInvestmentToGroup = async (
-    investmentId: number,
-    groupId: number | null
-  ) => {
+  const handleMoveInvestmentToGroup = async (investmentId: number, groupId: number | null) => {
     await updateInvestment(investmentId, { groupId });
   };
 
@@ -248,6 +226,10 @@ export default function InvestmentScreen() {
             allocationData={allocationData}
             totalAllocationValue={totalAllocationValue}
             contributionSeries={contributionSeries}
+            contributionsByInvestment={contributionsByInvestment}
+            accountsById={accountsById}
+            onEditInvestment={handleEditInvestment}
+            onAddContribution={handleAddContribution}
           />
         </TabsContent>
 

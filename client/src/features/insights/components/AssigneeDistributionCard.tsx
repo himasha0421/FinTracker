@@ -4,8 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TransactionWithAssignments } from '@/features/transactions/types';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
-
-const PIE_COLORS = ['#2563eb', '#f97316', '#22c55e', '#a855f7', '#ef4444', '#14b8a6'];
+import { chartPaletteHex } from '@/design/tokens';
 const formatCurrency = (value: number) => `$${value.toFixed(2)}`;
 
 type AssigneeDistributionCardProps = {
@@ -55,7 +54,7 @@ export default function AssigneeDistributionCard({
                       labelLine={false}
                     >
                       {distribution.map((entry, index) => (
-                        <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        <Cell key={entry.name} fill={chartPaletteHex[index % chartPaletteHex.length]} />
                       ))}
                     </Pie>
                   <Tooltip formatter={value => `$${Number(value).toFixed(2)}`} />
@@ -81,7 +80,7 @@ export default function AssigneeDistributionCard({
                           <p className="text-lg font-bold">{formatCurrency(entry.value)}</p>
                           <span
                             className="ml-auto inline-flex h-3 w-3 rounded-full"
-                            style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                            style={{ backgroundColor: chartPaletteHex[index % chartPaletteHex.length] }}
                           />
                         </div>
                       </div>

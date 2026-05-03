@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { goalStatusColours, goalIconColourClasses } from '@/design/tokens';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,11 +18,6 @@ const goalIcons: Record<string, JSX.Element> = {
   'credit-card': <CreditCard className="h-4 w-4" />,
 };
 
-const statusClasses: Record<string, string> = {
-  'in-progress': 'bg-blue-500 bg-opacity-20 text-blue-400',
-  completed: 'bg-green-500 bg-opacity-20 text-green-400',
-  pending: 'bg-yellow-500 bg-opacity-20 text-yellow-400',
-};
 
 const statusLabels: Record<string, string> = {
   'in-progress': 'In-progress',
@@ -29,13 +25,6 @@ const statusLabels: Record<string, string> = {
   pending: 'Pending',
 };
 
-const colorClasses: Record<string, string> = {
-  blue: 'bg-blue-500 text-blue-400',
-  green: 'bg-green-500 text-green-400',
-  yellow: 'bg-yellow-500 text-yellow-400',
-  purple: 'bg-purple-500 text-purple-400',
-  red: 'bg-red-500 text-red-400',
-};
 
 type GoalCardProps = {
   goal: GoalResponse;
@@ -67,8 +56,8 @@ const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
   const iconKey = goal.icon ?? 'shield';
   const colorKey = goal.color ?? 'blue';
   const statusKey = goal.status ?? 'in-progress';
-  const iconColorClass = colorClasses[colorKey] || colorClasses.blue;
-  const statusClass = statusClasses[statusKey] || statusClasses['in-progress'];
+  const iconColorClass = goalIconColourClasses[colorKey] ?? goalIconColourClasses.blue;
+  const statusClass = goalStatusColours[statusKey] ?? goalStatusColours['in-progress'];
   const statusLabel = statusLabels[statusKey] || 'In Progress';
 
   return (
