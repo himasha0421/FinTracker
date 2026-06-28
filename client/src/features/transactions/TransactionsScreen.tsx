@@ -44,11 +44,12 @@ type TransactionRowProps = {
 };
 
 function formatDate(date: Date | string) {
-  const d = typeof date === 'string' ? new Date(date + (date.includes('T') ? '' : 'T00:00:00')) : date;
+  const d = new Date(date);
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    timeZone: 'UTC',
   });
 }
 

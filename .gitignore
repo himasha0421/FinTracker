@@ -217,3 +217,4 @@ ai_backend/venv
 ai_backend/.env
 mock-design/*
 commands/*
+.claude/*

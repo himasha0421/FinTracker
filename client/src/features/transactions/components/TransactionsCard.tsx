@@ -18,19 +18,16 @@ const transactionIcons = iconOptions.reduce((acc, option) => {
   return acc;
 }, {} as Record<IconValue, JSX.Element>);
 
-function normaliseDate(date: Date | string): Date {
-  if (typeof date !== 'string') return date;
-  return new Date(date.includes('T') ? date : `${date}T00:00:00`);
-}
-
 function formatDate(date: Date | string) {
-  const txDate = normaliseDate(date);
-  const now = new Date();
-  const isToday = txDate.toDateString() === now.toDateString();
-  const isYesterday = new Date(now.setDate(now.getDate() - 1)).toDateString() === txDate.toDateString();
-  if (isToday) return 'Today';
-  if (isYesterday) return 'Yesterday';
-  return txDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const d = new Date(date);
+  const txDay = d.toISOString().slice(0, 10);
+  const today = new Date();
+  const todayDay = today.toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000);
+  const yesterdayDay = yesterday.toISOString().slice(0, 10);
+  if (txDay === todayDay) return 'Today';
+  if (txDay === yesterdayDay) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
 const TransactionItem = ({ transaction }: { transaction: TransactionWithAssignments }) => {
