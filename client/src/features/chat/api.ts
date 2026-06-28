@@ -1,40 +1,31 @@
-import { getDifyClient } from '@/services/difyClient';
+import { fetchWithErrorHandling } from '@/services/apiClient';
+import {
+  assigneeOptions,
+  categoryOptions,
+  subcategoryOptionsByCategory,
+} from '@/features/transactions/constants';
 import type { ChatResponse } from './types';
 
-export async function sendChat(
-  formData: FormData,
-  conversationId?: string
-): Promise<ChatResponse> {
-  try {
-    const difyClient = getDifyClient();
+const AI_BACKEND_URL =
+  import.meta.env.VITE_AI_BACKEND_URL || 'http://localhost:8000';
 
-    // Extract file and message from FormData
-    const file = formData.get('file') as File | null;
-    const message = formData.get('message') as string | null;
-
-    // Default query if no message provided
-    const query = message || 'Extract transactions from this bank statement';
-
-    // Send request to Dify
-    const response = await difyClient.sendMessage(query, file || undefined, conversationId);
-
-    // Parse the response to extract transactions
-    const transactions = difyClient.parseTransactions(response.answer);
-
-    // Return in the format expected by the frontend
-    return {
-      response: transactions.length > 0
-        ? `I've extracted ${transactions.length} transactions from your statement.`
-        : response.answer,
-      data: transactions,
-      task_type: transactions.length > 0 ? 'add_transactions' : undefined,
-      conversation_id: response.conversation_id,
-      message_id: response.message_id,
-    };
-  } catch (error) {
-    console.error('Dify API error:', error);
-    throw new Error(
-      error instanceof Error ? error.message : 'Failed to get response from AI'
-    );
+function buildSchemaHints() {
+  const subcategoriesByCategory: Record<string, string[]> = {};
+  for (const [category, subs] of Object.entries(subcategoryOptionsByCategory)) {
+    subcategoriesByCategory[category] = subs.map(s => s.value);
   }
+  return {
+    categories: categoryOptions.map(c => c.value),
+    subcategoriesByCategory,
+    assignees: assigneeOptions.map(a => a.value),
+  };
+}
+
+export async function sendChat(formData: FormData): Promise<ChatResponse> {
+  formData.append('schema_hints', JSON.stringify(buildSchemaHints()));
+
+  return fetchWithErrorHandling<ChatResponse>(`${AI_BACKEND_URL}/api/chat`, {
+    method: 'POST',
+    body: formData,
+  });
 }

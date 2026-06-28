@@ -1,167 +1,141 @@
-from fastapi import FastAPI, HTTPException, UploadFile, Form, File
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, HttpUrl
-from typing import List, Optional, Dict, Any
-import os
+import json
+from typing import Optional
+
 from dotenv import load_dotenv
-import openai
-from PIL import Image
-import io
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from tools.statement_reader import read_statement
 from tools.youtube_processor import process_youtube_video
-import json
 
-# Load environment variables
 load_dotenv()
 
-# Initialize FastAPI app
 app = FastAPI()
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Add your frontend URL
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize OpenAI client with proper configuration
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
-
-class ChatMessage(BaseModel):
-    role: str
-    content: str
-
-
-class ChatRequest(BaseModel):
-    messages: List[ChatMessage]
+ACCEPTED_MIME_PREFIXES = ("image/",)
+ACCEPTED_MIME_TYPES = {"application/pdf"}
 
 
 class YouTubeRequest(BaseModel):
     url: str
 
 
-async def process_image(file: UploadFile, message: str) -> str:
-    """Process an uploaded image using OCR."""
+def _parse_schema_hints(raw: Optional[str]) -> dict:
+    if not raw:
+        return {}
     try:
-        # Read the image file
-        contents = await file.read()
-        # extract statement transcations
-        transactions = read_statement(contents, message)
-        return json.loads(transactions)["transactions"]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def _parse_transactions(raw: str) -> list:
+    try:
+        parsed = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    if isinstance(parsed, dict):
+        transactions = parsed.get("transactions", [])
+        return transactions if isinstance(transactions, list) else []
+    if isinstance(parsed, list):
+        return parsed
+    return []
 
 
 @app.post("/api/chat")
 async def chat(
-    file: Optional[UploadFile] = File(None), message: Optional[str] = Form(None)
+    file: Optional[UploadFile] = File(None),
+    message: Optional[str] = Form(None),
+    schema_hints: Optional[str] = Form(None),
 ):
-    try:
-        messages = []
-        extracted_transactions = []
+    if not file and not message:
+        raise HTTPException(status_code=400, detail="No file or message provided")
 
-        # If there's a file, process it with OCR to extract necessary transaction information.
-        if file:
-            if file.content_type.startswith("image/"):
-                ocr_text = await process_image(file, message)
-                system_message = {
-                    "role": "system",
-                    "content": "You are a financial assistant. Analyze the following bank statement and extract all transactions:",
-                }
-                messages.append(system_message)
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": f"Here is the text extracted from the bank statement:\n\n{ocr_text}",
-                    }
-                )
-                # Store the extracted transactions
-                if isinstance(ocr_text, dict):
-                    extracted_transactions = [ocr_text]  # Single transaction
-                elif isinstance(ocr_text, list):
-                    extracted_transactions = ocr_text  # Multiple transactions
-            else:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Unsupported file type. Please upload an image file.",
-                )
+    transactions: list = []
 
-        # Add the user's message if provided
-        if message:
-            messages.append({"role": "user", "content": message})
+    if file:
+        content_type = file.content_type or ""
+        is_image = content_type.startswith(ACCEPTED_MIME_PREFIXES)
+        is_pdf = content_type in ACCEPTED_MIME_TYPES
 
-        # If no file or message provided, return error
-        if not file and not message:
-            raise HTTPException(status_code=400, detail="No file or message provided")
+        if not (is_image or is_pdf):
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported file type. Upload an image or PDF.",
+            )
 
-        # Call OpenAI API
-        # response = openai.ChatCompletion.create(
-        #     model="gpt-3.5-turbo", messages=messages, temperature=0.7, max_tokens=500
-        # )
-        response = "I have updated the transactions"
-        # Return both the chat response and extracted transactions
-        return {
-            "response": response,
-            "data": extracted_transactions,
-            "task_type": "add_transactions",
-        }
+        try:
+            file_bytes = await file.read()
+            raw = read_statement(
+                file_bytes=file_bytes,
+                customer_message=message,
+                content_type=content_type,
+                schema_hints=_parse_schema_hints(schema_hints),
+            )
+            transactions = _parse_transactions(raw)
+        except Exception as e:
+            print(f"Statement extraction failed: {e}")
+            raise HTTPException(status_code=500, detail="Failed to extract transactions from the file")
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    response_text = (
+        f"I've extracted {len(transactions)} transaction(s) from your statement."
+        if transactions
+        else "No transactions were found."
+    )
+
+    return {
+        "response": response_text,
+        "data": transactions,
+        "task_type": "add_transactions" if transactions else None,
+    }
 
 
 @app.post("/api/youtube-summary")
 async def youtube_summary(request: YouTubeRequest):
-    """
-    Process a YouTube video URL to extract transcript and generate summary.
-
-    Args:
-        request (YouTubeRequest): Request containing YouTube URL
-
-    Returns:
-        Dict[str, Any]: Processing results including summary and metadata
-    """
-    try:
-        # Validate the URL (basic check)
-        if (
-            not request.url
-            or "youtube.com" not in request.url
-            and "youtu.be" not in request.url
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid YouTube URL. Please provide a valid YouTube video URL.",
-            )
-
-        # Process the YouTube video
-        result = process_youtube_video(request.url)
-
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=result["error"])
-
-        # Return the processing results
-        return {
-            "response": "Successfully processed YouTube video",
-            "data": {
-                "title": result["metadata"]["title"],
-                "thumbnail_url": result["metadata"]["thumbnail_url"],
-                "video_url": result["metadata"]["video_url"],
-                "summary": result["summary"],
-                "tags": result["metadata"]["tags"],
-                "publish_date": result["metadata"]["publish_date"],
-            },
-            "task_type": "youtube_summary",
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
+    if not request.url or ("youtube.com" not in request.url and "youtu.be" not in request.url):
         raise HTTPException(
-            status_code=500, detail=f"Error processing YouTube video: {str(e)}"
+            status_code=400,
+            detail="Invalid YouTube URL. Please provide a valid YouTube video URL.",
         )
+
+    try:
+        result = process_youtube_video(request.url)
+    except Exception as e:
+        print(f"YouTube processing failed: {e}")
+        raise HTTPException(status_code=500, detail="Error processing YouTube video")
+
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Unknown error"))
+
+    metadata = result["metadata"]
+    return {
+        "response": "Successfully processed YouTube video",
+        "data": {
+            "title": metadata["title"],
+            "thumbnail_url": metadata["thumbnail_url"],
+            "video_url": metadata["video_url"],
+            "summary": result["summary"],
+            "tags": metadata["tags"],
+            "publish_date": metadata["publish_date"],
+        },
+        "task_type": "youtube_summary",
+    }
 
 
 if __name__ == "__main__":

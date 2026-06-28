@@ -11,18 +11,15 @@ export type ChatMessage = {
 export type ChatResponse = {
   response: string;
   data?: unknown;
-  task_type?: string;
-  conversation_id?: string;
-  message_id?: string;
+  task_type?: string | null;
 };
 
-export type DifyTransaction = {
+export type ExtractedTransaction = {
   description: string;
   amount: number;
   date: string;
   category: string;
   subcategory?: string;
   type: 'income' | 'expense';
-  icon: string;
-  accountId: string;
+  assignee?: string;
 };

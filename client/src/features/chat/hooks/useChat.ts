@@ -18,7 +18,6 @@ export function useChat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const pendingFileUrl = useRef<string | null>(null);
 
   useEffect(() => {
@@ -52,6 +51,7 @@ export function useChat() {
         amount: transaction.amount.toString(),
         date: new Date(transaction.date),
         category: transaction.category || 'Uncategorized',
+        subcategory: transaction.subcategory || undefined,
         type: transaction.type || 'expense',
         icon: derivedIcon,
         accountId: 4,
@@ -59,6 +59,7 @@ export function useChat() {
           {
             assignee:
               transaction.assignee &&
+              transaction.assignee !== 'None' &&
               assigneeOptions.some(option => option.value === transaction.assignee)
                 ? transaction.assignee
                 : 'Hima',
@@ -107,12 +108,7 @@ export function useChat() {
     setIsLoading(true);
 
     try {
-      const data: ChatResponse = await sendChat(formData, conversationId);
-
-      // Update conversation ID for multi-turn conversations
-      if (data.conversation_id) {
-        setConversationId(data.conversation_id);
-      }
+      const data: ChatResponse = await sendChat(formData);
 
       const assistantMessage: ChatMessage = {
         role: 'assistant',
