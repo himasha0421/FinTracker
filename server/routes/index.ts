@@ -12,6 +12,7 @@ import { createInvestmentsRouter } from './investments';
 import { createInvestmentContributionsRouter } from './investmentContributions';
 import { createInvestmentGroupsRouter } from './investmentGroups';
 import { createTaxPlansRouter } from './taxPlans';
+import { createChatRouter } from './chat';
 import { wrap } from './utils';
 import { HttpError } from '../errors';
 
@@ -51,6 +52,7 @@ export function createApiRouter() {
     createInvestmentContributionsRouter(investmentService)
   );
   router.use('/tax-plans', createTaxPlansRouter(taxPlanService));
+  router.use('/chat', createChatRouter());
 
   router.use(
     '*',

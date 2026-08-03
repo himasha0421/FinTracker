@@ -6,9 +6,6 @@ import {
 } from '@/features/transactions/constants';
 import type { ChatResponse } from './types';
 
-const AI_BACKEND_URL =
-  import.meta.env.VITE_AI_BACKEND_URL || 'http://localhost:8000';
-
 function buildSchemaHints() {
   const subcategoriesByCategory: Record<string, string[]> = {};
   for (const [category, subs] of Object.entries(subcategoryOptionsByCategory)) {
@@ -24,7 +21,7 @@ function buildSchemaHints() {
 export async function sendChat(formData: FormData): Promise<ChatResponse> {
   formData.append('schema_hints', JSON.stringify(buildSchemaHints()));
 
-  return fetchWithErrorHandling<ChatResponse>(`${AI_BACKEND_URL}/api/chat`, {
+  return fetchWithErrorHandling<ChatResponse>('/api/chat', {
     method: 'POST',
     body: formData,
   });
