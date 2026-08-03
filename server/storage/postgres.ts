@@ -36,6 +36,7 @@ import {
   taxPlans,
   taxPlanScenarios,
 } from '@shared/schema';
+import { computeBucketBreakdown } from '@shared/goals';
 import { IStorage } from './types';
 
 export class PostgresStorage implements IStorage {
@@ -54,13 +55,44 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
+  // An account with linked investments should never disagree with the
+  // Investments tab — derive its balance from those investments at read
+  // time (self-healing) instead of trusting a separately-stored number that
+  // can drift. Used by every account read path (list/detail/goal linking)
+  // so they all agree, not just the top-level accounts list.
+  private async hydrateAccountBalances(accountsList: Account[]): Promise<Account[]> {
+    if (!accountsList.length) return accountsList;
+    const accountIds = accountsList.map(account => account.id);
+    const linkedInvestments = await db
+      .select()
+      .from(investments)
+      .where(inArray(investments.accountId, accountIds));
+
+    const totalsByAccount = new Map<number, number>();
+    linkedInvestments.forEach(investment => {
+      if (investment.accountId == null) return;
+      totalsByAccount.set(
+        investment.accountId,
+        (totalsByAccount.get(investment.accountId) ?? 0) + Number(investment.currentValue)
+      );
+    });
+
+    return accountsList.map(account => {
+      const total = totalsByAccount.get(account.id);
+      if (total === undefined) return account;
+      return { ...account, balance: total.toFixed(2) };
+    });
+  }
+
   async getAccounts(): Promise<Account[]> {
-    return db.select().from(accounts);
+    const result = await db.select().from(accounts);
+    return this.hydrateAccountBalances(result);
   }
 
   async getAccount(id: number): Promise<Account | undefined> {
     const result = await db.select().from(accounts).where(eq(accounts.id, id)).limit(1);
-    return result[0];
+    if (!result[0]) return undefined;
+    return (await this.hydrateAccountBalances([result[0]]))[0];
   }
 
   async createAccount(insertAccount: InsertAccount): Promise<Account> {
@@ -613,9 +645,10 @@ export class PostgresStorage implements IStorage {
     if (!goalLinks.length) return goals;
 
     const accountIds = Array.from(new Set(goalLinks.map(link => link.accountId)));
-    const linkedAccountsList = accountIds.length
+    const rawLinkedAccountsList = accountIds.length
       ? await db.select().from(accounts).where(inArray(accounts.id, accountIds))
       : [];
+    const linkedAccountsList = await this.hydrateAccountBalances(rawLinkedAccountsList);
 
     const accountMap = new Map(linkedAccountsList.map(account => [account.id, account]));
     const accountsByGoal = new Map<number, Account[]>();
@@ -637,6 +670,7 @@ export class PostgresStorage implements IStorage {
         currentAmount: total.toFixed(2),
         linkedAccounts: linked,
         status: this.deriveGoalStatus(String(total), String(goal.targetAmount)),
+        ...(goal.type === 'home-purchase' ? { bucketBreakdown: computeBucketBreakdown(linked) } : {}),
       };
     });
   }

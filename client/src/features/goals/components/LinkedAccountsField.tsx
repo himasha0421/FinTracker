@@ -4,11 +4,23 @@ import { FormField, FormItem, FormLabel, FormDescription, FormMessage } from '@/
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { usePersonLabels } from '@/hooks/usePersonLabels';
 import type { Account } from '@shared/schema';
 import type { GoalFormControl } from './GoalForm';
 
 const ACCOUNT_LIST_MAX_HEIGHT = 260;
 const ESTIMATED_ACCOUNT_ROW_HEIGHT = 56;
+
+const REGISTERED_TYPE_LABELS: Record<string, string> = { tfsa: 'TFSA', fhsa: 'FHSA', rrsp: 'RRSP' };
+
+function accountBucketTag(account: Account, ownerLabels: Record<string, string>): string | null {
+  const registeredLabel = account.registeredType
+    ? REGISTERED_TYPE_LABELS[account.registeredType] ?? account.registeredType
+    : null;
+  const ownerLabel = account.ownerPersonKey ? ownerLabels[account.ownerPersonKey] ?? null : null;
+  if (registeredLabel && ownerLabel) return `${ownerLabel} • ${registeredLabel}`;
+  return registeredLabel ?? ownerLabel;
+}
 
 type Props = {
   control: GoalFormControl;
@@ -27,6 +39,8 @@ export function LinkedAccountsField({
   isLoadingAccounts,
   formatCurrency,
 }: Props) {
+  const personLabels = usePersonLabels();
+
   return (
     <FormField
       control={control}
@@ -55,6 +69,7 @@ export function LinkedAccountsField({
                 onToggle={field.onChange}
                 isLoadingAccounts={isLoadingAccounts}
                 formatCurrency={formatCurrency}
+                personLabels={personLabels}
               />
             </PopoverContent>
           </Popover>
@@ -63,7 +78,14 @@ export function LinkedAccountsField({
               <p className="font-medium text-foreground">Selected accounts</p>
               {linkedAccounts.map(account => (
                 <div key={account.id} className="flex items-center justify-between">
-                  <span>{account.name}</span>
+                  <span>
+                    {account.name}
+                    {accountBucketTag(account, personLabels) && (
+                      <span className="ml-1.5 text-muted-foreground">
+                        ({accountBucketTag(account, personLabels)})
+                      </span>
+                    )}
+                  </span>
                   <span className="font-mono">{formatCurrency(account.balance)}</span>
                 </div>
               ))}
@@ -85,6 +107,7 @@ type AccountSelectionListProps = {
   onToggle: (ids: string[]) => void;
   isLoadingAccounts: boolean;
   formatCurrency: (value: string | number) => string;
+  personLabels: Record<string, string>;
 };
 
 function AccountSelectionList({
@@ -93,6 +116,7 @@ function AccountSelectionList({
   onToggle,
   isLoadingAccounts,
   formatCurrency,
+  personLabels,
 }: AccountSelectionListProps) {
   const shouldScroll = useMemo(() => {
     const estimatedHeight = (accounts?.length ?? 0) * ESTIMATED_ACCOUNT_ROW_HEIGHT;
@@ -125,7 +149,14 @@ function AccountSelectionList({
             }}
             disabled={isLoadingAccounts}
           >
-            <span>{account.name}</span>
+            <span>
+              {account.name}
+              {accountBucketTag(account, personLabels) && (
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  ({accountBucketTag(account, personLabels)})
+                </span>
+              )}
+            </span>
             <span className="font-mono text-xs">{formatCurrency(account.balance)}</span>
           </button>
         );

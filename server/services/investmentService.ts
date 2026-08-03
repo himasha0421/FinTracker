@@ -174,7 +174,7 @@ export class InvestmentService {
     if (investment) {
       const delta = contribution.type === 'withdrawal' ? -Number(contribution.amount) : Number(contribution.amount);
       const newValue = (Number(investment.currentValue) + delta).toString();
-      await this.storage.updateInvestment(investment.id, { currentValue: newValue });
+      await this.updateInvestment(investment.id, { currentValue: newValue });
     }
 
     return contribution;
@@ -196,7 +196,7 @@ export class InvestmentService {
         const diff = newSigned - oldSigned;
         if (diff !== 0) {
           const newValue = (Number(investment.currentValue) + diff).toString();
-          await this.storage.updateInvestment(investment.id, { currentValue: newValue });
+          await this.updateInvestment(investment.id, { currentValue: newValue });
         }
       }
     }
@@ -213,7 +213,7 @@ export class InvestmentService {
       if (investment) {
         const signed = old.type === 'withdrawal' ? -Number(old.amount) : Number(old.amount);
         const newValue = (Number(investment.currentValue) - signed).toString();
-        await this.storage.updateInvestment(investment.id, { currentValue: newValue });
+        await this.updateInvestment(investment.id, { currentValue: newValue });
       }
     }
 

@@ -38,7 +38,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { Account } from '@shared/schema';
+import type { AccountResponse } from '@/features/accounts/api';
+import { ACCOUNT_REGISTERED_TYPES } from '@shared/goals';
+import { TAX_PERSON_KEYS } from '@shared/taxPlanning';
+import { usePersonLabels } from '@/hooks/usePersonLabels';
+
+// 'none' is a form-only sentinel for "unset" — Radix Select can't use an
+// empty string as an item value. Converted to null before submit.
+const NONE = 'none';
 
 // Form schema extending the insertAccountSchema from shared/schema
 const accountFormSchema = z.object({
@@ -50,6 +57,8 @@ const accountFormSchema = z.object({
   type: z.enum(['savings', 'checking', 'credit', 'investment', 'loan']),
   icon: z.enum(['wallet', 'scale', 'credit-card', 'plus-square', 'car']),
   color: z.enum(['green', 'blue', 'purple', 'red', 'yellow']),
+  registeredType: z.enum([NONE, ...ACCOUNT_REGISTERED_TYPES]),
+  ownerPersonKey: z.enum([NONE, ...TAX_PERSON_KEYS]),
 });
 
 const accountTypes = [
@@ -58,6 +67,13 @@ const accountTypes = [
   { value: 'credit', label: 'Credit Card' },
   { value: 'investment', label: 'Investment' },
   { value: 'loan', label: 'Loan (Liability)' },
+];
+
+const registeredTypeOptions = [
+  { value: NONE, label: 'Not registered' },
+  { value: 'tfsa', label: 'TFSA' },
+  { value: 'fhsa', label: 'FHSA' },
+  { value: 'rrsp', label: 'RRSP' },
 ];
 
 const iconOptions = [
@@ -79,7 +95,7 @@ const colorOptions = [
 type AccountFormProps = {
   isOpen: boolean;
   onClose: () => void;
-  account: Account | null;
+  account: AccountResponse | null;
 };
 
 type AccountFormValues = z.infer<typeof accountFormSchema>;
@@ -90,8 +106,10 @@ type AccountColor = AccountFormValues['color'];
 const accountTypesSet: AccountType[] = ['savings', 'checking', 'credit', 'investment', 'loan'];
 const accountIconsSet: AccountIcon[] = ['wallet', 'scale', 'credit-card', 'plus-square', 'car'];
 const accountColorsSet: AccountColor[] = ['green', 'blue', 'purple', 'red', 'yellow'];
+const registeredTypeSet = ACCOUNT_REGISTERED_TYPES as readonly string[];
+const ownerPersonKeySet = TAX_PERSON_KEYS as readonly string[];
 
-const getDefaultValues = (account?: Account | null): AccountFormValues => {
+const getDefaultValues = (account?: AccountResponse | null): AccountFormValues => {
   const type = accountTypesSet.includes(account?.type as AccountType)
     ? (account?.type as AccountType)
     : 'savings';
@@ -101,6 +119,12 @@ const getDefaultValues = (account?: Account | null): AccountFormValues => {
   const color = accountColorsSet.includes(account?.color as AccountColor)
     ? (account?.color as AccountColor)
     : 'green';
+  const registeredType = registeredTypeSet.includes(account?.registeredType ?? '')
+    ? (account!.registeredType as AccountFormValues['registeredType'])
+    : NONE;
+  const ownerPersonKey = ownerPersonKeySet.includes(account?.ownerPersonKey ?? '')
+    ? (account!.ownerPersonKey as AccountFormValues['ownerPersonKey'])
+    : NONE;
 
   return {
     name: account?.name ?? '',
@@ -109,12 +133,21 @@ const getDefaultValues = (account?: Account | null): AccountFormValues => {
     type,
     icon,
     color,
+    registeredType,
+    ownerPersonKey,
   };
 };
 
 export default function AccountForm({ isOpen, onClose, account }: AccountFormProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { addAccount, updateAccount, deleteAccount, isLoading } = useFinance();
+  const personLabels = usePersonLabels();
+
+  const ownerPersonKeyOptions = [
+    { value: NONE, label: 'Joint / unassigned' },
+    { value: 'personA', label: personLabels.personA },
+    { value: 'personB', label: personLabels.personB },
+  ];
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
@@ -125,6 +158,8 @@ export default function AccountForm({ isOpen, onClose, account }: AccountFormPro
     const payload = {
       ...data,
       description: data.description ?? null,
+      registeredType: data.registeredType === NONE ? null : data.registeredType,
+      ownerPersonKey: data.ownerPersonKey === NONE ? null : data.ownerPersonKey,
     };
 
     if (account) {
@@ -188,8 +223,20 @@ export default function AccountForm({ isOpen, onClose, account }: AccountFormPro
                   <FormItem>
                     <FormLabel>Balance</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        {...field}
+                        disabled={account?.linkedInvestmentsTotal !== undefined || field.disabled}
+                      />
                     </FormControl>
+                    {account?.linkedInvestmentsTotal !== undefined && (
+                      <p className="text-xs text-muted-foreground">
+                        Tracked automatically from this account's linked investments.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -219,6 +266,58 @@ export default function AccountForm({ isOpen, onClose, account }: AccountFormPro
                   </FormItem>
                 )}
               />
+
+              <div className="flex gap-4">
+                <FormField
+                  control={form.control}
+                  name="registeredType"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Registered type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select registered type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {registeredTypeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="ownerPersonKey"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Owner</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select owner" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {ownerPersonKeyOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="flex gap-4">
                 <FormField

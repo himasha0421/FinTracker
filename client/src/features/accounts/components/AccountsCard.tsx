@@ -6,8 +6,7 @@ import { SectionCard, SectionCardHeader, SectionCardContent } from '@/components
 import { SkeletonListItem } from '@/components/composed/SkeletonListItem';
 import { EmptyState } from '@/components/composed/EmptyState';
 import AccountForm from '@/features/accounts/components/AccountForm';
-import type { Account } from '@shared/schema';
-import { accountsListQuery } from '@/features/accounts/api';
+import { accountsListQuery, type AccountResponse } from '@/features/accounts/api';
 import { entityColourClasses } from '@/design/tokens';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -38,8 +37,8 @@ const accountIcons: Record<string, JSX.Element> = {
 };
 
 type AccountItemProps = {
-  account: Account;
-  onEdit: (account: Account) => void;
+  account: AccountResponse;
+  onEdit: (account: AccountResponse) => void;
 };
 
 const liabilityTypes = new Set(['credit', 'loan']);
@@ -76,14 +75,14 @@ const AccountItem = ({ account, onEdit }: AccountItemProps) => {
 
 export default function AccountsCard() {
   const [isAccountFormOpen, setIsAccountFormOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [editingAccount, setEditingAccount] = useState<AccountResponse | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const { data: accounts, isLoading } = useQuery(accountsListQuery());
 
   const groupedAccounts = useMemo(() => {
     if (!accounts?.length) return [];
-    const groups: Record<string, { accounts: Account[]; totalBalance: number }> = {};
+    const groups: Record<string, { accounts: AccountResponse[]; totalBalance: number }> = {};
 
     accounts.forEach(account => {
       const groupKey = account.type || 'other';
@@ -104,7 +103,7 @@ export default function AccountsCard() {
   };
 
   const handleAddAccount = () => { setEditingAccount(null); setIsAccountFormOpen(true); };
-  const handleEditAccount = (account: Account) => { setEditingAccount(account); setIsAccountFormOpen(true); };
+  const handleEditAccount = (account: AccountResponse) => { setEditingAccount(account); setIsAccountFormOpen(true); };
   const handleFormClose = () => { setIsAccountFormOpen(false); setEditingAccount(null); };
 
   return (

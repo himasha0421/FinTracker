@@ -2,6 +2,8 @@ import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '@/services/apiClient';
 import type { Account } from '@shared/schema';
 
+export type AccountResponse = Account & { linkedInvestmentsTotal?: number };
+
 export const accountKeys = {
   all: ['accounts'] as const,
   detail: (id: number) => ['accounts', id] as const,
@@ -9,16 +11,16 @@ export const accountKeys = {
 };
 
 export function accountsListQuery() {
-  return queryOptions<Account[]>({
+  return queryOptions<AccountResponse[]>({
     queryKey: accountKeys.all,
-    queryFn: () => apiClient<Account[]>('/api/accounts'),
+    queryFn: () => apiClient<AccountResponse[]>('/api/accounts'),
   });
 }
 
 export function accountDetailQuery(id: number) {
-  return queryOptions<Account>({
+  return queryOptions<AccountResponse>({
     queryKey: accountKeys.detail(id),
-    queryFn: () => apiClient<Account>(`/api/accounts/${id}`),
+    queryFn: () => apiClient<AccountResponse>(`/api/accounts/${id}`),
   });
 }
 

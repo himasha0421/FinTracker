@@ -1,5 +1,9 @@
-import { insertFinancialGoalSchema } from '@shared/schema';
+import { z } from 'zod';
+import { insertFinancialGoalSchema, type InsertFinancialGoal } from '@shared/schema';
+import { GOAL_TYPES, homePurchaseGoalDetailsSchema, type GoalType } from '@shared/goals';
 import type { IStorage } from '../storage';
+
+const goalTypeSchema = z.enum(GOAL_TYPES);
 
 function normalizeGoalPayload(payload: any) {
   const data = { ...payload };
@@ -22,6 +26,15 @@ function normalizeGoalPayload(payload: any) {
   return { data, linkedAccountIds };
 }
 
+// Keeps stale home-purchase data from lingering on a goal that isn't (or is
+// no longer) type 'home-purchase' — always null unless the type matches.
+function normalizeHomePurchaseDetails(type: GoalType, details: unknown) {
+  if (type !== 'home-purchase') {
+    return null;
+  }
+  return homePurchaseGoalDetailsSchema.parse(details);
+}
+
 export class GoalService {
   constructor(private storage: IStorage) {}
 
@@ -33,15 +46,29 @@ export class GoalService {
     return this.storage.getFinancialGoal(id);
   }
 
-  createGoal(payload: unknown) {
+  async createGoal(payload: unknown) {
     const { data, linkedAccountIds } = normalizeGoalPayload(payload);
     const parsed = insertFinancialGoalSchema.parse(data);
-    return this.storage.createFinancialGoal(parsed, linkedAccountIds);
+    const type = goalTypeSchema.parse(parsed.type ?? 'generic');
+    const homePurchaseDetails = normalizeHomePurchaseDetails(type, parsed.homePurchaseDetails);
+    return this.storage.createFinancialGoal({ ...parsed, type, homePurchaseDetails }, linkedAccountIds);
   }
 
-  updateGoal(id: number, payload: unknown) {
+  async updateGoal(id: number, payload: unknown) {
     const { data, linkedAccountIds } = normalizeGoalPayload(payload);
-    const parsed = insertFinancialGoalSchema.partial().parse(data);
+    const parsed = insertFinancialGoalSchema.partial().parse(data) as Partial<InsertFinancialGoal>;
+
+    if ('type' in parsed || 'homePurchaseDetails' in parsed) {
+      const existing = await this.storage.getFinancialGoal(id);
+      const effectiveType = goalTypeSchema.parse(parsed.type ?? existing?.type ?? 'generic');
+      const effectiveDetails =
+        'homePurchaseDetails' in parsed ? parsed.homePurchaseDetails : existing?.homePurchaseDetails;
+      parsed.homePurchaseDetails = normalizeHomePurchaseDetails(effectiveType, effectiveDetails);
+      if ('type' in parsed) {
+        parsed.type = effectiveType;
+      }
+    }
+
     return this.storage.updateFinancialGoal(id, parsed, linkedAccountIds);
   }
 

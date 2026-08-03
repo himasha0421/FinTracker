@@ -1,8 +1,12 @@
 import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '@/services/apiClient';
 import type { Account, FinancialGoal } from '@shared/schema';
+import type { GoalBucketBreakdown } from '@shared/goals';
 
-export type GoalResponse = FinancialGoal & { linkedAccounts?: Account[] };
+export type GoalResponse = FinancialGoal & {
+  linkedAccounts?: Account[];
+  bucketBreakdown?: GoalBucketBreakdown[];
+};
 export type GoalPayload = Omit<FinancialGoal, 'id'> & {
   linkedAccountIds?: number[];
 };

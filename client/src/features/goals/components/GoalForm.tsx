@@ -27,12 +27,14 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { GoalResponse } from '@/features/goals/api';
 import { accountsListQuery } from '@/features/accounts/api';
+import { GOAL_TYPES } from '@shared/goals';
 import { BasicGoalDetails } from './BasicGoalDetails';
 import { GoalAmountFields } from './GoalAmountFields';
 import { LinkedAccountsField } from './LinkedAccountsField';
 import { TargetDateField } from './TargetDateField';
 import { StatusField } from './StatusField';
 import { IconColorFields } from './IconColorFields';
+import { HomePurchaseFields } from './HomePurchaseFields';
 
 // Form schema for financial goals
 // Define types for goal status, icon, and color
@@ -40,23 +42,46 @@ const statusOptions = ['in-progress', 'completed', 'pending'] as const;
 const iconOptions = ['shield', 'trending-up', 'credit-card'] as const;
 const colorOptions = ['blue', 'green', 'yellow', 'purple', 'red'] as const;
 
-const goalFormSchema = z.object({
-  name: z.string().min(1, 'Goal name is required'),
-  description: z.string(), // Changed to just string to avoid null in form
-  targetAmount: z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, {
-    message: 'Target amount must be a positive number',
-  }),
-  currentAmount: z.string().refine(val => !isNaN(Number(val)) && Number(val) >= 0, {
-    message: 'Current amount must be a non-negative number',
-  }),
-  targetDate: z
-    .string()
-    .refine(val => !isNaN(Date.parse(val)), { message: 'Target date must be a valid date' }),
-  status: z.enum(statusOptions),
-  icon: z.enum(iconOptions),
-  color: z.enum(colorOptions),
-  linkedAccountIds: z.array(z.string()).default([]),
-});
+const goalFormSchema = z
+  .object({
+    name: z.string().min(1, 'Goal name is required'),
+    description: z.string(), // Changed to just string to avoid null in form
+    targetAmount: z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, {
+      message: 'Target amount must be a positive number',
+    }),
+    currentAmount: z.string().refine(val => !isNaN(Number(val)) && Number(val) >= 0, {
+      message: 'Current amount must be a non-negative number',
+    }),
+    targetDate: z
+      .string()
+      .refine(val => !isNaN(Date.parse(val)), { message: 'Target date must be a valid date' }),
+    status: z.enum(statusOptions),
+    icon: z.enum(iconOptions),
+    color: z.enum(colorOptions),
+    linkedAccountIds: z.array(z.string()).default([]),
+    type: z.enum(GOAL_TYPES).default('generic'),
+    targetHomePrice: z.string(),
+    downPaymentPercent: z.string(),
+    closingCostsEstimate: z.string(),
+    contributorAmountPersonA: z.string(),
+    contributorAmountPersonB: z.string(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type !== 'home-purchase') return;
+    const requiredFields: Array<[keyof typeof data, string]> = [
+      ['targetHomePrice', 'Target home price is required'],
+      ['downPaymentPercent', 'Down payment % is required'],
+      ['closingCostsEstimate', 'Closing costs estimate is required'],
+      ['contributorAmountPersonA', "Partner A's monthly contribution is required"],
+      ['contributorAmountPersonB', "Partner B's monthly contribution is required"],
+    ];
+    for (const [field, message] of requiredFields) {
+      const value = data[field];
+      if (typeof value !== 'string' || value.trim() === '' || isNaN(Number(value))) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message });
+      }
+    }
+  });
 
 export type GoalStatus = (typeof statusOptions)[number];
 export type GoalIcon = (typeof iconOptions)[number];
@@ -68,6 +93,24 @@ type GoalFormProps = {
   isOpen: boolean;
   onClose: () => void;
   goal: GoalResponse | null;
+};
+
+const getGoalTypeDefault = (goal: GoalResponse | null): (typeof GOAL_TYPES)[number] =>
+  GOAL_TYPES.includes(goal?.type as (typeof GOAL_TYPES)[number])
+    ? (goal!.type as (typeof GOAL_TYPES)[number])
+    : 'generic';
+
+const getHomePurchaseDefaults = (goal: GoalResponse | null) => {
+  const details = goal?.homePurchaseDetails;
+  const personA = details?.contributors.find(c => c.personKey === 'personA');
+  const personB = details?.contributors.find(c => c.personKey === 'personB');
+  return {
+    targetHomePrice: details ? String(details.targetHomePrice) : '',
+    downPaymentPercent: details ? String(details.downPaymentPercent) : '',
+    closingCostsEstimate: details ? String(details.closingCostsEstimate) : '',
+    contributorAmountPersonA: personA ? String(personA.monthlyTargetAmount) : '',
+    contributorAmountPersonB: personB ? String(personB.monthlyTargetAmount) : '',
+  };
 };
 
 export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
@@ -87,7 +130,7 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
     return formatDateForInput(date);
   };
 
-  const form = useForm<z.infer<typeof goalFormSchema>>({
+  const form = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
     defaultValues: {
       name: goal?.name || '',
@@ -103,6 +146,8 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
       linkedAccountIds: goal?.linkedAccounts
         ? goal.linkedAccounts.map(account => account.id.toString())
         : [],
+      type: getGoalTypeDefault(goal),
+      ...getHomePurchaseDefaults(goal),
     },
   });
 
@@ -140,9 +185,13 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
         linkedAccountIds: goal?.linkedAccounts
           ? goal.linkedAccounts.map(account => account.id.toString())
           : [],
+        type: getGoalTypeDefault(goal),
+        ...getHomePurchaseDefaults(goal),
       });
     }
   }, [form, goal, isOpen]);
+
+  const goalType = form.watch('type');
 
   useEffect(() => {
     if (linkedAccounts.length > 0) {
@@ -156,13 +205,36 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
       .map(id => Number(id))
       .filter(id => !Number.isNaN(id));
 
+    const homePurchaseDetails =
+      data.type === 'home-purchase'
+        ? {
+            targetHomePrice: Number(data.targetHomePrice),
+            downPaymentPercent: Number(data.downPaymentPercent),
+            closingCostsEstimate: Number(data.closingCostsEstimate),
+            contributors: [
+              { personKey: 'personA' as const, monthlyTargetAmount: Number(data.contributorAmountPersonA) },
+              { personKey: 'personB' as const, monthlyTargetAmount: Number(data.contributorAmountPersonB) },
+            ],
+          }
+        : null;
+
+    const {
+      targetHomePrice,
+      downPaymentPercent,
+      closingCostsEstimate,
+      contributorAmountPersonA,
+      contributorAmountPersonB,
+      ...rest
+    } = data;
+
     const formattedData = {
-      ...data,
+      ...rest,
       currentAmount:
         linkedAccounts.length > 0 ? linkedAccountsTotal.toFixed(2) : data.currentAmount,
       targetDate: new Date(data.targetDate),
       description: data.description || null,
       linkedAccountIds: numericLinkedAccountIds,
+      homePurchaseDetails,
     };
 
     if (goal) {
@@ -192,6 +264,8 @@ export default function GoalForm({ isOpen, onClose, goal }: GoalFormProps) {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <BasicGoalDetails control={form.control} />
+
+              {goalType === 'home-purchase' && <HomePurchaseFields control={form.control} />}
 
               <GoalAmountFields
                 control={form.control}

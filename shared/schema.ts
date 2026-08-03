@@ -6,6 +6,7 @@ import type {
   TaxPersonInput,
   TaxScenarioOverrides,
 } from './taxPlanning';
+import type { HomePurchaseGoalDetails } from './goals';
 
 // Account table
 export const accounts = pgTable('accounts', {
@@ -16,6 +17,8 @@ export const accounts = pgTable('accounts', {
   type: text('type').notNull(), // savings, checking, credit, investment, loan
   icon: text('icon').default('wallet'), // Default icon name
   color: text('color').default('green'), // Default color name
+  registeredType: text('registered_type'), // tfsa, fhsa, rrsp — null if not a registered account
+  ownerPersonKey: text('owner_person_key'), // personA, personB — null if joint/unattributed
 });
 
 export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true });
@@ -122,10 +125,20 @@ export const financialGoals = pgTable('financial_goals', {
   status: text('status').default('in-progress').notNull(), // in-progress, completed, pending
   icon: text('icon').default('target'), // Default icon name
   color: text('color').default('blue'), // Default color name
+  type: text('type').default('generic').notNull(), // generic, home-purchase
+  homePurchaseDetails: jsonb('home_purchase_details').$type<HomePurchaseGoalDetails | null>(),
 });
 
 export const insertFinancialGoalSchema = createInsertSchema(financialGoals).omit({ id: true });
-export type InsertFinancialGoal = z.infer<typeof insertFinancialGoalSchema>;
+// drizzle-zod widens jsonb columns to a generic Json union regardless of the
+// column's `.$type<>()` annotation — narrow it back here so downstream code
+// (goalService, storage) gets the real HomePurchaseGoalDetails shape.
+export type InsertFinancialGoal = Omit<
+  z.infer<typeof insertFinancialGoalSchema>,
+  'homePurchaseDetails'
+> & {
+  homePurchaseDetails?: HomePurchaseGoalDetails | null;
+};
 export type FinancialGoal = typeof financialGoals.$inferSelect;
 
 export const financialGoalAccounts = pgTable('financial_goal_accounts', {

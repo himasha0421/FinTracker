@@ -22,6 +22,7 @@ import {
   TaxPlanScenario,
   InsertTaxPlanScenario,
 } from '@shared/schema';
+import { computeBucketBreakdown } from '@shared/goals';
 import { IStorage } from './types';
 
 export class MemoryStorage implements IStorage {
@@ -86,12 +87,35 @@ export class MemoryStorage implements IStorage {
     return user;
   }
 
+  // An account with linked investments should never disagree with the
+  // Investments tab — derive its balance from those investments at read
+  // time (self-healing) instead of trusting a separately-stored number that
+  // can drift. Used by every account read path (list/detail/goal linking)
+  // so they all agree, not just the top-level accounts list.
+  private hydrateAccountBalances(accounts: Account[]): Account[] {
+    const totalsByAccount = new Map<number, number>();
+    this.investments.forEach(investment => {
+      if (investment.accountId == null) return;
+      totalsByAccount.set(
+        investment.accountId,
+        (totalsByAccount.get(investment.accountId) ?? 0) + Number(investment.currentValue)
+      );
+    });
+    return accounts.map(account => {
+      const total = totalsByAccount.get(account.id);
+      if (total === undefined) return account;
+      return { ...account, balance: total.toFixed(2) };
+    });
+  }
+
   async getAccounts(): Promise<Account[]> {
-    return Array.from(this.accounts.values());
+    return this.hydrateAccountBalances(Array.from(this.accounts.values()));
   }
 
   async getAccount(id: number): Promise<Account | undefined> {
-    return this.accounts.get(id);
+    const account = this.accounts.get(id);
+    if (!account) return undefined;
+    return this.hydrateAccountBalances([account])[0];
   }
 
   async createAccount(insertAccount: InsertAccount): Promise<Account> {
@@ -103,6 +127,8 @@ export class MemoryStorage implements IStorage {
       balance: insertAccount.balance || '0',
       icon: insertAccount.icon || 'wallet',
       color: insertAccount.color || 'green',
+      registeredType: insertAccount.registeredType ?? null,
+      ownerPersonKey: insertAccount.ownerPersonKey ?? null,
     };
     this.accounts.set(id, account);
     return account;
@@ -319,6 +345,8 @@ export class MemoryStorage implements IStorage {
       status: insertGoal.status || 'pending',
       icon: insertGoal.icon || 'target',
       color: insertGoal.color || 'blue',
+      type: insertGoal.type || 'generic',
+      homePurchaseDetails: insertGoal.homePurchaseDetails ?? null,
     };
     this.financialGoals.set(id, goal);
     if (linkedAccountIds.length) {
@@ -616,16 +644,20 @@ export class MemoryStorage implements IStorage {
     return goals.map(goal => {
       const linkedAccountIds = Array.from(this.goalAccounts.get(goal.id) ?? []);
       if (!linkedAccountIds.length) return goal;
-      const linkedAccounts = linkedAccountIds
+      const rawLinkedAccounts = linkedAccountIds
         .map(accountId => this.accounts.get(accountId))
         .filter((account): account is Account => Boolean(account));
-      if (!linkedAccounts.length) return goal;
+      if (!rawLinkedAccounts.length) return goal;
+      const linkedAccounts = this.hydrateAccountBalances(rawLinkedAccounts);
       const total = linkedAccounts.reduce((sum, account) => sum + Number(account.balance), 0);
       return {
         ...goal,
         currentAmount: total.toFixed(2),
         linkedAccounts,
         status: this.deriveGoalStatus(String(total), String(goal.targetAmount)),
+        ...(goal.type === 'home-purchase'
+          ? { bucketBreakdown: computeBucketBreakdown(linkedAccounts) }
+          : {}),
       };
     });
   }
